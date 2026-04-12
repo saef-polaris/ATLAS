@@ -1,0 +1,17 @@
+[project]
+name = "atlas-ats"
+version = "0.1.0"
+description = "ATLAS — Antarctic Treaty Literature & Analysis System"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas",
+  "pyarrow",
+  "duckdb",
+]
+
+[project.scripts]
+atlas = "atlas.support_tracer_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["atlas*"]
