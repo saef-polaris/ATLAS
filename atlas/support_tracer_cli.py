@@ -6,6 +6,14 @@ import json
 from pathlib import Path
 
 from .config import DEFAULT_DATA_REPO, ensure_data_dir, get_data_dir
+from .llm_item_classifier import (
+    DEFAULT_CLASSIFICATIONS_PATH,
+    DEFAULT_MODEL,
+    DEFAULT_PROMPT_PATH,
+    DEFAULT_VALIDATION_BUNDLE_PATH,
+    classify_items,
+    export_llm_validation_bundle,
+)
 from .manual_validation import DEFAULT_BUNDLE_PATH, export_validation_bundle
 from .support_tracer_backend import (
     DB_PATH,
@@ -46,6 +54,22 @@ def parse_args() -> argparse.Namespace:
     validation.add_argument("--sample-per-case-type", type=int, default=None)
     validation.add_argument("--random-seed", type=int, default=0)
 
+    llm = sub.add_parser("classify-items-llm", help="Classify extracted items with Codex/gpt-5.4-mini and write JSONL results.")
+    llm.add_argument("--marker-dir", type=Path, default=MARKER_DIR)
+    llm.add_argument("--prompt-path", type=Path, default=DEFAULT_PROMPT_PATH)
+    llm.add_argument("--output-path", type=Path, default=DEFAULT_CLASSIFICATIONS_PATH)
+    llm.add_argument("--bundle-path", type=Path, default=DEFAULT_VALIDATION_BUNDLE_PATH)
+    llm.add_argument("--model", default=DEFAULT_MODEL)
+    llm.add_argument("--run", default=None)
+    llm.add_argument("--limit", type=int, default=None)
+    llm.add_argument("--workers", type=int, default=4)
+    llm.add_argument("--overwrite", action="store_true")
+
+    llm_bundle = sub.add_parser("export-llm-validation", help="Export manual-validation bundle from LLM item classifications.")
+    llm_bundle.add_argument("--classifications-path", type=Path, default=DEFAULT_CLASSIFICATIONS_PATH)
+    llm_bundle.add_argument("--output-path", type=Path, default=DEFAULT_VALIDATION_BUNDLE_PATH)
+    llm_bundle.add_argument("--limit", type=int, default=None)
+
     q_out = sub.add_parser("output", help="Trace a formal output to items and papers.")
     q_out.add_argument("label")
     q_out.add_argument("--db-path", type=Path, default=DB_PATH)
@@ -84,6 +108,28 @@ def main() -> None:
             limit=args.limit,
             sample_per_case_type=args.sample_per_case_type,
             random_seed=args.random_seed,
+        )
+        print(bundle_path)
+        return
+    if args.command == "classify-items-llm":
+        output_path = classify_items(
+            marker_dir=args.marker_dir,
+            prompt_path=args.prompt_path,
+            output_path=args.output_path,
+            model=args.model,
+            run=args.run,
+            limit=args.limit,
+            workers=args.workers,
+            overwrite=args.overwrite,
+        )
+        bundle_path = export_llm_validation_bundle(classifications_path=output_path, output_path=args.bundle_path)
+        print(json.dumps({"classifications": str(output_path), "bundle": str(bundle_path)}, ensure_ascii=False))
+        return
+    if args.command == "export-llm-validation":
+        bundle_path = export_llm_validation_bundle(
+            classifications_path=args.classifications_path,
+            output_path=args.output_path,
+            limit=args.limit,
         )
         print(bundle_path)
         return

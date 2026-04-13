@@ -45,13 +45,19 @@ Build parser tables:
 python -m atlas.parse_marker_full_pagewise
 ```
 
-Export a manual-validation bundle:
+Export a manual-validation bundle from the rule-based links:
 
 ```bash
 python -m atlas.support_tracer_cli export-validation --output-path validation_bundle.json
 ```
 
-Then open `manual_validation.html` in a browser and load that JSON file.
+Or classify items with Codex / gpt-5.4-mini and export an LLM validation bundle:
+
+```bash
+python -m atlas.support_tracer_cli classify-items-llm --limit 30 --workers 4
+```
+
+Then open `manual_validation.html` in a browser and load the exported JSON file.
 
 Build the backend:
 
