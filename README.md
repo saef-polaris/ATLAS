@@ -51,10 +51,18 @@ Export a manual-validation bundle from the rule-based links:
 python -m atlas.support_tracer_cli export-validation --output-path validation_bundle.json
 ```
 
-Or classify item content with Codex / gpt-5.4-mini and export an LLM validation bundle. This extracts:
+Or classify item content with the OpenAI API (`gpt-5.4-mini`) and export an LLM validation bundle. This extracts:
 - outputs mentioned in the item
 - papers mentioned in the item
 - direct paper -> output links inferred from the item text
+
+Set your API key first:
+
+```bash
+export OPENAI_API_KEY=...
+```
+
+Then run:
 
 ```bash
 python -m atlas.support_tracer_cli classify-items-llm --limit 30 --workers 4

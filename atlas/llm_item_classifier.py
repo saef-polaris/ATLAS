@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import json
-import shutil
-import subprocess
-import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,6 +9,7 @@ from typing import Any
 import sys
 
 import pandas as pd
+from openai import OpenAI
 
 from .config import ensure_data_dir, get_marker_dir
 
@@ -166,34 +164,23 @@ def _parse_response(text: str) -> dict[str, Any]:
 
 
 def classify_item(item: dict[str, Any], prompt_path: Path = DEFAULT_PROMPT_PATH, model: str = DEFAULT_MODEL) -> dict[str, Any]:
-    if shutil.which("codex") is None:
-        raise RuntimeError("`codex` CLI is not installed or not on PATH.")
     prompt_text = prompt_path.read_text()
     prompt = _build_prompt(prompt_text, item)
-    with tempfile.TemporaryDirectory() as tmp:
-        tmpdir = Path(tmp)
-        schema_path = tmpdir / "schema.json"
-        output_path = tmpdir / "response.json"
-        schema_path.write_text(json.dumps(SCHEMA, indent=2))
-        cmd = [
-            "codex",
-            "exec",
-            "--skip-git-repo-check",
-            "--model",
-            model,
-            "--output-schema",
-            str(schema_path),
-            "-o",
-            str(output_path),
-            "-C",
-            str(ROOT),
-            "-",
-        ]
-        proc = subprocess.run(cmd, input=prompt, text=True, capture_output=True)
-        if proc.returncode != 0:
-            raise RuntimeError(f"Codex failed for {item['item_id']}: {proc.stderr.strip() or proc.stdout.strip()}")
-        raw = output_path.read_text().strip() if output_path.exists() else proc.stdout.strip()
-        parsed = _parse_response(raw)
+    client = OpenAI()
+    response = client.responses.create(
+        model=model,
+        input=prompt,
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "item_link_extraction",
+                "schema": SCHEMA,
+                "strict": True,
+            }
+        },
+    )
+    raw = response.output_text
+    parsed = _parse_response(raw)
     return {
         "item_id": item["item_id"],
         "item": item,
