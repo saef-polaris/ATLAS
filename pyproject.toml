@@ -7,7 +7,7 @@ dependencies = [
   "pandas",
   "pyarrow",
   "duckdb",
-  "openai",
+  "google-genai",
 ]
 
 [project.scripts]

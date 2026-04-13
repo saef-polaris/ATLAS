@@ -9,7 +9,7 @@ from typing import Any
 import sys
 
 import pandas as pd
-from openai import OpenAI
+from google import genai
 
 from .config import ensure_data_dir, get_marker_dir
 
@@ -18,84 +18,7 @@ MARKER_DIR = get_marker_dir()
 DEFAULT_PROMPT_PATH = ROOT / "prompt_check.md"
 DEFAULT_CLASSIFICATIONS_PATH = MARKER_DIR / "item_llm_links.jsonl"
 DEFAULT_VALIDATION_BUNDLE_PATH = MARKER_DIR / "item_llm_link_validation_bundle.json"
-DEFAULT_MODEL = "gpt-5.4-mini"
-
-SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "item_summary": {
-            "type": "object",
-            "additionalProperties": False,
-            "properties": {
-                "adoption_context": {"type": "boolean"},
-                "substantive_discussion": {"type": "boolean"},
-                "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-            },
-            "required": ["adoption_context", "substantive_discussion", "confidence"],
-        },
-        "outputs": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "output_label": {"type": "string"},
-                    "output_type": {"type": "string", "enum": ["Measure", "Resolution", "Decision", "Recommendation"]},
-                    "output_number": {"type": "integer"},
-                    "output_year": {"type": "integer"},
-                    "adoption_context": {"type": "boolean"},
-                    "substantive_discussion": {"type": "boolean"},
-                    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-                    "evidence": {"type": "string"},
-                },
-                "required": [
-                    "output_label",
-                    "output_type",
-                    "output_number",
-                    "output_year",
-                    "adoption_context",
-                    "substantive_discussion",
-                    "confidence",
-                    "evidence",
-                ],
-            },
-        },
-        "papers": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "paper_label": {"type": "string"},
-                    "paper_type": {"type": "string", "enum": ["WP", "IP", "SP", "BP"]},
-                    "paper_number": {"type": "integer"},
-                    "paper_rev": {"type": ["integer", "null"]},
-                    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-                    "evidence": {"type": "string"},
-                },
-                "required": ["paper_label", "paper_type", "paper_number", "paper_rev", "confidence", "evidence"],
-            },
-        },
-        "paper_output_links": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "paper_label": {"type": "string"},
-                    "output_label": {"type": "string"},
-                    "relation_type": {"type": "string", "enum": ["supports", "discusses", "proposes", "informs", "unclear"]},
-                    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-                    "reason": {"type": "string"},
-                    "evidence": {"type": "string"},
-                },
-                "required": ["paper_label", "output_label", "relation_type", "confidence", "reason", "evidence"],
-            },
-        },
-    },
-    "required": ["item_summary", "outputs", "papers", "paper_output_links"],
-}
+DEFAULT_MODEL = "gemma-4-26b-a4b-it"
 
 
 def _clean_value(value: Any) -> Any:
@@ -141,7 +64,7 @@ def _build_prompt(prompt_text: str, item: dict[str, Any]) -> str:
         "heading_source": item.get("heading_source"),
         "item_text": item.get("text"),
     }
-    return f"{prompt_text.strip()}\n\nReturn only JSON matching the schema.\n\nClassify this agenda item:\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n"
+    return f"{prompt_text.strip()}\n\nReturn valid JSON only.\n\nClassify this agenda item:\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n"
 
 
 def _parse_response(text: str) -> dict[str, Any]:
@@ -166,20 +89,9 @@ def _parse_response(text: str) -> dict[str, Any]:
 def classify_item(item: dict[str, Any], prompt_path: Path = DEFAULT_PROMPT_PATH, model: str = DEFAULT_MODEL) -> dict[str, Any]:
     prompt_text = prompt_path.read_text()
     prompt = _build_prompt(prompt_text, item)
-    client = OpenAI()
-    response = client.responses.create(
-        model=model,
-        input=prompt,
-        text={
-            "format": {
-                "type": "json_schema",
-                "name": "item_link_extraction",
-                "schema": SCHEMA,
-                "strict": True,
-            }
-        },
-    )
-    raw = response.output_text
+    client = genai.Client()
+    response = client.models.generate_content(model=model, contents=prompt)
+    raw = response.text or ""
     parsed = _parse_response(raw)
     return {
         "item_id": item["item_id"],
@@ -255,94 +167,52 @@ def export_llm_validation_bundle(classifications_path: Path = DEFAULT_CLASSIFICA
     rows = [json.loads(line) for line in classifications_path.read_text().splitlines() if line.strip()]
     rows = sorted(rows, key=lambda r: r["item_id"])
     cases: list[dict[str, Any]] = []
-    case_idx = 0
-    for row in rows:
+    for case_idx, row in enumerate(rows):
         item = row["item"]
         llm = row["llm_result"]
-        base_pred = {
+        links = llm.get("paper_output_links", []) or []
+        predicted = {
             "run": item.get("run"),
             "sequence_id": item.get("sequence_id"),
             "sequence_type": item.get("sequence_type"),
             "item_num": item.get("item_num"),
             "item_title": item.get("item_title"),
             "model": row.get("model"),
-            "item_confidence": llm.get("item_summary", {}).get("confidence"),
-            "adoption_context": llm.get("item_summary", {}).get("adoption_context"),
-            "substantive_discussion": llm.get("item_summary", {}).get("substantive_discussion"),
+            "item_reason": llm.get("item_reason"),
+            "paper_output_links": links,
+            "paper_labels": sorted({link.get("paper_label") for link in links if link.get("paper_label")}),
+            "output_labels": sorted({link.get("output_label") for link in links if link.get("output_label")}),
+            "link_count": len(links),
         }
-
-        for output in llm.get("outputs", []):
-            cases.append(
-                {
-                    "case_id": f"llm_output::{case_idx:06d}",
-                    "case_type": "llm_output",
-                    "predicted": {**base_pred, **output},
-                    "evidence": {
-                        "primary_evidence": output.get("evidence"),
-                        "item_text": item.get("text"),
-                        "item_metadata": {
-                            "heading_source": item.get("heading_source"),
-                            "start_page": item.get("start_page"),
-                            "end_page": item.get("end_page"),
-                            "start_line": item.get("start_line"),
-                            "end_line": item.get("end_line"),
-                        },
+        primary_evidence = "\n\n".join(
+            f"{link.get('paper_label', '')} -> {link.get('output_label', '')}: {link.get('evidence', '')}" for link in links
+        )
+        cases.append(
+            {
+                "case_id": f"llm_item::{case_idx:06d}",
+                "case_type": "llm_item",
+                "predicted": predicted,
+                "evidence": {
+                    "primary_evidence": primary_evidence,
+                    "item_text": item.get("text"),
+                    "item_metadata": {
+                        "heading_source": item.get("heading_source"),
+                        "start_page": item.get("start_page"),
+                        "end_page": item.get("end_page"),
+                        "start_line": item.get("start_line"),
+                        "end_line": item.get("end_line"),
                     },
-                    "review": {"status": "unreviewed", "corrected": {}, "notes": ""},
-                }
-            )
-            case_idx += 1
-
-        for paper in llm.get("papers", []):
-            cases.append(
-                {
-                    "case_id": f"llm_paper::{case_idx:06d}",
-                    "case_type": "llm_paper",
-                    "predicted": {**base_pred, **paper},
-                    "evidence": {
-                        "primary_evidence": paper.get("evidence"),
-                        "item_text": item.get("text"),
-                        "item_metadata": {
-                            "heading_source": item.get("heading_source"),
-                            "start_page": item.get("start_page"),
-                            "end_page": item.get("end_page"),
-                            "start_line": item.get("start_line"),
-                            "end_line": item.get("end_line"),
-                        },
-                    },
-                    "review": {"status": "unreviewed", "corrected": {}, "notes": ""},
-                }
-            )
-            case_idx += 1
-
-        for link in llm.get("paper_output_links", []):
-            cases.append(
-                {
-                    "case_id": f"llm_link::{case_idx:06d}",
-                    "case_type": "llm_link",
-                    "predicted": {**base_pred, **link},
-                    "evidence": {
-                        "primary_evidence": link.get("evidence"),
-                        "item_text": item.get("text"),
-                        "item_metadata": {
-                            "heading_source": item.get("heading_source"),
-                            "start_page": item.get("start_page"),
-                            "end_page": item.get("end_page"),
-                            "start_line": item.get("start_line"),
-                            "end_line": item.get("end_line"),
-                        },
-                    },
-                    "review": {"status": "unreviewed", "corrected": {}, "notes": ""},
-                }
-            )
-            case_idx += 1
+                },
+                "review": {"status": "unreviewed", "corrected": {}, "notes": ""},
+            }
+        )
 
     if limit is not None:
         cases = cases[:limit]
     bundle = {
         "generated_at": datetime.now(UTC).isoformat(),
         "classifications_path": str(classifications_path),
-        "case_types": ["llm_output", "llm_paper", "llm_link"],
+        "case_types": ["llm_item"],
         "case_count": len(cases),
         "cases": cases,
     }

@@ -17,6 +17,10 @@
       --warn: #f59e0b;
       --border: #334155;
       --hl: #fef08a;
+      --hl2: #86efac;
+      --hl3: #93c5fd;
+      --hl4: #f9a8d4;
+      --hl5: #fdba74;
     }
     * { box-sizing: border-box; }
     body {
@@ -35,7 +39,7 @@
     h1, h2, h3 { margin: 0 0 8px; }
     .card {
       background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 12px; min-width: 0;
     }
     .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     input, select, textarea, button {
@@ -60,23 +64,76 @@
     }
     .item:hover, .item.active { background: #172033; }
     .muted { color: var(--muted); }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     pre {
-      white-space: pre-wrap; word-wrap: break-word; background: #020617;
-      border: 1px solid var(--border); padding: 12px; border-radius: 8px; max-height: 40vh; overflow: auto;
+      white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; background: #020617;
+      border: 1px solid var(--border); padding: 12px; border-radius: 8px; max-height: 40vh; overflow: auto; max-width: 100%;
     }
     .hl { background: var(--hl); color: #111827; padding: 0 2px; border-radius: 2px; }
+    .hl2 { background: var(--hl2); color: #111827; padding: 0 2px; border-radius: 2px; }
+    .hl3 { background: var(--hl3); color: #111827; padding: 0 2px; border-radius: 2px; }
+    .hl4 { background: var(--hl4); color: #111827; padding: 0 2px; border-radius: 2px; }
+    .hl5 { background: var(--hl5); color: #111827; padding: 0 2px; border-radius: 2px; }
     .status-unreviewed { color: var(--muted); }
     .status-accepted { color: var(--ok); }
     .status-rejected { color: var(--bad); }
     .status-corrected { color: var(--accent); }
     .status-skipped { color: var(--warn); }
     .tight { margin-top: 8px; }
-    .small { font-size: 12px; }
+    .small { font-size: 12px; overflow-wrap: anywhere; word-break: break-word; }
+    .link-editor-row {
+      display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,0.9fr) minmax(0,0.8fr) auto;
+      gap: 8px; align-items: start; margin-top: 8px;
+    }
+    .link-editor-row textarea { min-height: 60px; }
+    .claim-summary { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+    .claim-summary-box { border:1px solid var(--border); border-radius:8px; padding:8px; background:var(--panel-2); min-width:0; }
+    .graph-stage {
+      border:1px solid var(--border); border-radius:8px; background:#020617; overflow:auto;
+    }
+    .graph-canvas {
+      position:relative; min-width:920px; height:var(--graph-height); min-height:260px;
+    }
+    .graph-lines { position:absolute; inset:0; width:100%; height:100%; }
+    .graph-link { fill:none; stroke:#64748b; stroke-width:2.5; pointer-events:stroke; cursor:pointer; }
+    .graph-link-hit { fill:none; stroke:transparent; stroke-width:18; pointer-events:stroke; cursor:pointer; }
+    .graph-link.selected { stroke:var(--accent); stroke-width:4; }
+    .graph-link.edge-approved { stroke:var(--ok); }
+    .graph-link.edge-rejected { stroke:var(--bad); }
+    .graph-link.edge-corrected { stroke:var(--accent); }
+    .graph-link.edge-skipped { stroke:var(--warn); }
+    .graph-edge-label {
+      fill:var(--muted); font-size:11px; pointer-events:all; cursor:pointer;
+      paint-order:stroke; stroke:#020617; stroke-width:5px; stroke-linejoin:round;
+    }
+    .graph-edge-label.selected { fill:var(--accent); }
+    .graph-node-card {
+      position:absolute; width:220px; min-height:54px; border:1px solid var(--border);
+      border-radius:8px; padding:8px; background:var(--panel-2); color:var(--text);
+      overflow-wrap:anywhere;
+    }
+    .graph-node-card strong { display:block; margin-bottom:4px; }
+    .graph-node-card.paper { border-color:#0e7490; }
+    .graph-node-card.item-node { border-color:#64748b; background:#172033; }
+    .graph-node-card.outcome { border-color:#4d7c0f; }
+    .graph-node-meta { color:var(--muted); font-size:11px; }
+    .graph-empty { border:1px dashed var(--border); border-radius:8px; padding:10px; color:var(--muted); }
+    .edge-approved { border-color:#166534; background:#052e16; color:#bbf7d0; }
+    .edge-rejected { border-color:#991b1b; background:#450a0a; color:#fecaca; }
+    .edge-corrected { border-color:#0369a1; background:#082f49; color:#bae6fd; }
+    .edge-skipped { border-color:#92400e; background:#451a03; color:#fed7aa; }
+    .edge-panel {
+      border:1px solid var(--border); border-radius:8px; padding:10px; background:var(--panel-2);
+      margin-top:10px;
+    }
+    .edge-panel textarea { min-height: 68px; }
+    .edge-actions button { min-width: 86px; }
+    .edge-empty { border:1px dashed var(--border); border-radius:8px; padding:10px; color:var(--muted); }
     @media (max-width: 980px) {
       .app { grid-template-columns: 1fr; }
       .grid2, .grid3 { grid-template-columns: 1fr; }
+      .claim-summary { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -104,6 +161,7 @@
           <option value="item_output">item_output</option>
           <option value="paper_item">paper_item</option>
           <option value="paper_output">paper_output</option>
+          <option value="llm_item">llm_item</option>
         </select>
         <label class="tight" for="filterStatus">Filter status</label>
         <select id="filterStatus">
@@ -149,6 +207,11 @@
           </div>
         </div>
 
+        <div class="card">
+          <h3>Validation graph</h3>
+          <div id="claimChainView" class="small muted">No item context loaded.</div>
+        </div>
+
         <div class="grid2">
           <div class="card">
             <h3>Predicted link</h3>
@@ -178,15 +241,13 @@
         </div>
 
         <div class="card">
-          <h3>Corrections</h3>
-          <div class="grid3">
-            <div><label>Corrected run</label><input id="corrRun"></div>
-            <div><label>Corrected sequence type</label><input id="corrSeqType"></div>
-            <div><label>Corrected item num</label><input id="corrItemNum"></div>
-            <div><label>Corrected paper label</label><input id="corrPaperLabel"></div>
-            <div><label>Corrected output label</label><input id="corrOutputLabel"></div>
-            <div><label>Corrected title / item title</label><input id="corrTitle"></div>
+          <div class="row" style="justify-content:space-between;">
+            <h3>Corrections for this item</h3>
+            <button id="addLinkBtn" class="primary">Add link</button>
           </div>
+          <label class="tight" for="editReasonBox">Reason for edits</label>
+          <textarea id="editReasonBox" rows="2" placeholder="Why were the inferred links changed?"></textarea>
+          <div id="correctedLinksEditor" class="small muted">No corrected links.</div>
         </div>
 
         <div class="grid2">
@@ -205,6 +266,7 @@
             <h3>Item text</h3>
             <input id="highlightBox" style="max-width:320px;" placeholder="extra highlight term">
           </div>
+          <div id="highlightLegend" class="small muted tight"></div>
           <pre id="itemTextBlock"></pre>
         </div>
       </div>
@@ -218,6 +280,7 @@
       filtered: [],
       activeIndex: 0,
       storageKey: null,
+      selectedEdge: null,
     };
 
     const els = {
@@ -246,13 +309,12 @@
       notesBox: document.getElementById('notesBox'),
       statusBox: document.getElementById('statusBox'),
       storageKeyBox: document.getElementById('storageKeyBox'),
-      corrRun: document.getElementById('corrRun'),
-      corrSeqType: document.getElementById('corrSeqType'),
-      corrItemNum: document.getElementById('corrItemNum'),
-      corrPaperLabel: document.getElementById('corrPaperLabel'),
-      corrOutputLabel: document.getElementById('corrOutputLabel'),
-      corrTitle: document.getElementById('corrTitle'),
+      correctedLinksEditor: document.getElementById('correctedLinksEditor'),
+      editReasonBox: document.getElementById('editReasonBox'),
+      addLinkBtn: document.getElementById('addLinkBtn'),
+      claimChainView: document.getElementById('claimChainView'),
       highlightBox: document.getElementById('highlightBox'),
+      highlightLegend: document.getElementById('highlightLegend'),
       errorBox: document.getElementById('errorBox'),
     };
 
@@ -270,7 +332,9 @@
       return (str ?? '').toString()
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function pretty(obj) {
@@ -353,19 +417,309 @@
             <span class="pill status-${status}">${status}</span>
           </div>
           <div class="small muted">${escapeHtml(c.case_type)} · ${escapeHtml(c.predicted.run || '')}</div>
-          <div class="small">${escapeHtml(c.predicted.output_label || c.predicted.paper_label || c.predicted.item_title || '')}</div>
+          <div class="small">${escapeHtml((c.predicted.link_count != null ? `${c.predicted.link_count} link(s)` : (c.predicted.output_label || c.predicted.paper_label || c.predicted.item_title || '')))}</div>
         `;
         div.onclick = () => { state.activeIndex = idx; renderCaseList(); renderCase(); };
         els.caseList.appendChild(div);
       });
     }
 
+    function itemKey(c) {
+      const p = c.predicted || {};
+      return [p.run || '', p.sequence_id || '', p.sequence_type || '', p.item_num || ''].join('::');
+    }
+
+    function ensureReview(c) {
+      c.review = c.review || { status: 'unreviewed', corrected_links: [], edit_reason: '', notes: '', claim_reviews: {}, edge_reviews: {} };
+      if (!c.review.claim_reviews || typeof c.review.claim_reviews !== 'object') c.review.claim_reviews = {};
+      if (!c.review.edge_reviews || typeof c.review.edge_reviews !== 'object') c.review.edge_reviews = {};
+      return c.review;
+    }
+
+    function itemContext(c) {
+      if (c.item_context) return c.item_context;
+      if (c.item_context_key && state.bundle?.item_contexts?.[c.item_context_key]) {
+        return state.bundle.item_contexts[c.item_context_key];
+      }
+      const key = itemKey(c);
+      const related = state.cases.filter(x => itemKey(x) === key);
+      const ctx = {
+        item_key: c.predicted || {},
+        item_entries: [],
+        papers: [],
+        outcomes: [],
+        claims: [],
+      };
+      const entrySeen = new Set();
+      const paperSeen = new Set();
+      const outcomeSeen = new Set();
+      related.forEach((x, idx) => {
+        const p = x.predicted || {};
+        const entryKey = [p.item_title || '', p.run || '', p.sequence_id || '', p.sequence_type || '', p.item_num || ''].join('::');
+        if (!entrySeen.has(entryKey)) {
+          entrySeen.add(entryKey);
+          ctx.item_entries.push({
+            run: p.run,
+            sequence_id: p.sequence_id,
+            sequence_type: p.sequence_type,
+            item_num: p.item_num,
+            item_title: p.item_title,
+          });
+        }
+        if (p.paper_label && !paperSeen.has(p.paper_label)) {
+          paperSeen.add(p.paper_label);
+          ctx.papers.push({
+            paper_kind: p.paper_kind,
+            paper_number: p.paper_number,
+            paper_rev: p.paper_rev,
+            paper_label: p.paper_label,
+            link_basis: p.link_basis,
+            link_confidence: p.link_confidence,
+            item_title: p.item_title,
+          });
+        }
+        if (p.output_label && !outcomeSeen.has(p.output_label)) {
+          outcomeSeen.add(p.output_label);
+          ctx.outcomes.push({
+            output_type: p.output_type,
+            output_number: p.output_number,
+            output_year: p.output_year,
+            output_label: p.output_label,
+            title: p.title || p.output_title,
+            evidence: x.evidence?.primary_evidence,
+            link_basis: p.link_basis,
+            link_confidence: p.link_confidence,
+          });
+        }
+        const links = p.paper_output_links;
+        if (Array.isArray(links) && links.length) {
+          links.forEach((link, linkIdx) => {
+            if (link.paper_label && !paperSeen.has(link.paper_label)) {
+              paperSeen.add(link.paper_label);
+              ctx.papers.push({
+                paper_label: link.paper_label,
+                link_basis: link.relation_type,
+                link_confidence: link.confidence,
+                item_title: p.item_title,
+              });
+            }
+            if (link.output_label && !outcomeSeen.has(link.output_label)) {
+              outcomeSeen.add(link.output_label);
+              ctx.outcomes.push({
+                output_label: link.output_label,
+                link_basis: link.relation_type,
+                link_confidence: link.confidence,
+                evidence: link.evidence,
+              });
+            }
+            ctx.claims.push({
+              claim_id: `claim::${key}::llm::${idx}::${linkIdx}`,
+              paper_label: link.paper_label || null,
+              item_title: p.item_title || null,
+              output_label: link.output_label || null,
+              relation_type: link.relation_type || null,
+              link_confidence: link.confidence || null,
+              reason: link.reason || null,
+              evidence: link.evidence || null,
+            });
+          });
+        } else if (p.paper_label || p.output_label) {
+          ctx.claims.push({
+            claim_id: `claim::${key}::case::${idx}`,
+            paper_label: p.paper_label || null,
+            item_title: p.item_title || null,
+            output_label: p.output_label || null,
+            relation_type: p.relation_type || null,
+            link_confidence: p.confidence || p.link_confidence || null,
+            link_basis: p.link_basis || null,
+            reason: p.reason || null,
+            evidence: p.evidence || x.evidence?.primary_evidence || null,
+          });
+        }
+      });
+      return ctx;
+    }
+
+    function claimReview(c, claimId) {
+      const review = ensureReview(c);
+      return review.claim_reviews[claimId] || {};
+    }
+
+    function setClaimReview(c, claimId, patch) {
+      const key = itemKey(c);
+      state.cases.filter(x => itemKey(x) === key).forEach(x => {
+        const review = ensureReview(x);
+        review.claim_reviews[claimId] = {
+          ...(review.claim_reviews[claimId] || {}),
+          ...patch,
+          updated_at: new Date().toISOString(),
+        };
+      });
+      persistReviews();
+      renderSummary();
+    }
+
+    function edgeId(kind, c, row) {
+      const paper = row.paper_label || 'no-paper';
+      const item = row.item_title || c.predicted?.item_title || c.predicted?.item_num || 'item';
+      const outcome = row.output_label || 'no-outcome';
+      if (kind === 'paper_item') return `${kind}::${itemKey(c)}::${paper}::${item}`;
+      if (kind === 'item_outcome') return `${kind}::${itemKey(c)}::${item}::${outcome}`;
+      return `${kind}::${itemKey(c)}::${paper}::${item}::${outcome}`;
+    }
+
+    function edgeReview(c, id) {
+      const review = ensureReview(c);
+      return review.edge_reviews[id] || {};
+    }
+
+    function setEdgeReview(c, id, patch) {
+      const key = itemKey(c);
+      state.cases.filter(x => itemKey(x) === key).forEach(x => {
+        const review = ensureReview(x);
+        review.edge_reviews[id] = {
+          ...(review.edge_reviews[id] || {}),
+          ...patch,
+          updated_at: new Date().toISOString(),
+        };
+      });
+      persistReviews();
+      renderSummary();
+    }
+
+    function edgeStatusLabel(status) {
+      return {
+        approved: 'approved',
+        rejected: 'rejected',
+        corrected: 'corrected',
+        skipped: 'skipped',
+      }[status] || 'unreviewed';
+    }
+
+    function edgeStatusClass(status) {
+      return status ? `edge-${status}` : '';
+    }
+
+    function attrValue(value) {
+      return encodeURIComponent(value ?? '');
+    }
+
+    function readAttrValue(value) {
+      try {
+        return decodeURIComponent(value || '');
+      } catch (err) {
+        return value || '';
+      }
+    }
+
+    function selectedEdgePanel(c) {
+      const selected = state.selectedEdge;
+      if (!selected || selected.itemKey !== itemKey(c)) {
+        return '<div class="edge-empty tight">Click an edge in the graph to review it.</div>';
+      }
+      const review = edgeReview(c, selected.id);
+      const status = edgeStatusLabel(review.status);
+      const edge = graphData(c).edges.find(x => x.id === selected.id);
+      const path = selected.from_label && selected.to_label
+        ? `${selected.from_label} -> ${selected.to_label}`
+        : selected.kind === 'paper_item'
+          ? `${selected.paper_label || '(no paper)'} -> ${selected.item_title || '(item)'}`
+          : `${selected.item_title || '(item)'} -> ${selected.outcome_label || '(no outcome)'}`;
+      const sources = edge?.sources?.length ? `<div class="small muted tight">Sources: ${escapeHtml(edge.sources.join(' · '))}</div>` : '';
+      const relation = edge?.relation_types?.length || edge?.confidences?.length
+        ? `<div class="small muted tight">${escapeHtml([...(edge.relation_types || []), ...(edge.confidences || [])].join(' · '))}</div>`
+        : '';
+      const evidence = edge?.evidence?.length
+        ? `<div class="small tight"><strong>Evidence:</strong> ${escapeHtml(edge.evidence.slice(0, 3).join(' | '))}</div>`
+        : '';
+      return `
+        <div class="edge-panel">
+          <div class="row" style="justify-content:space-between;">
+            <strong>Selected edge</strong>
+            <span class="pill ${edgeStatusClass(review.status)}">${escapeHtml(status)}</span>
+          </div>
+          <div class="tight">${escapeHtml(selected.label || selected.kind || 'edge')}: ${escapeHtml(path)}</div>
+          ${sources}
+          ${relation}
+          ${evidence}
+          <div class="row tight edge-actions">
+            <button class="ok" data-edge-status="approved">Approve</button>
+            <button class="bad" data-edge-status="rejected">Reject</button>
+            <button class="primary" data-edge-status="corrected">Correct</button>
+            <button class="warn" data-edge-status="skipped">Skip</button>
+          </div>
+          <div class="grid2 tight">
+            <div>
+              <label>Correction</label>
+              <input data-edge-correction="true" value="${escapeHtml(review.correction || '')}" placeholder="Correct paper, item, outcome, or relation">
+            </div>
+            <div>
+              <label>Note / evidence</label>
+              <textarea data-edge-note="true" placeholder="Why is this edge approved, rejected, or corrected?">${escapeHtml(review.notes || '')}</textarea>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function claimRows(c) {
+      const ctxClaims = itemContext(c).claims || [];
+      if (ctxClaims.length) {
+        return ctxClaims.map(x => ({
+          claim_id: x.claim_id,
+          paper_label: x.paper_label || null,
+          output_label: x.output_label || null,
+          relation_type: x.relation_type || x.link_basis || null,
+          confidence: x.confidence || x.link_confidence || null,
+          reason: x.reason || null,
+          evidence: x.evidence || null,
+          item_title: x.item_title || null,
+        }));
+      }
+      const links = c.predicted?.paper_output_links || [];
+      if (Array.isArray(links) && links.length) return links;
+      if (c.predicted?.paper_label || c.predicted?.output_label) {
+        return [{
+          paper_label: c.predicted.paper_label || null,
+          output_label: c.predicted.output_label || null,
+          relation_type: c.predicted.relation_type || null,
+          confidence: c.predicted.confidence || null,
+          reason: c.predicted.reason || null,
+          evidence: c.predicted.evidence || c.evidence?.primary_evidence || null,
+        }];
+      }
+      return [];
+    }
+
+    function uniqueTermsForItem(c) {
+      const seen = new Set();
+      const terms = [];
+      const addTerm = candidate => {
+        const term = (candidate || '').trim();
+        if (!term || term.length < 3 || seen.has(term)) return;
+        seen.add(term);
+        terms.push(term);
+      };
+      for (const link of claimRows(c)) {
+        for (const candidate of [link.paper_label, link.output_label]) {
+          addTerm(candidate);
+        }
+      }
+      (itemContext(c).item_entries || []).forEach(entry => addTerm(entry.item_title));
+      addTerm(c.predicted?.item_title);
+      const extra = els.highlightBox.value.trim();
+      if (extra && !seen.has(extra)) terms.push(extra);
+      return terms;
+    }
+
     function highlightText(text, terms) {
       let out = escapeHtml(text || '');
-      terms.filter(Boolean).forEach(term => {
+      const classes = ['hl', 'hl2', 'hl3', 'hl4', 'hl5'];
+      terms.filter(Boolean).forEach((term, idx) => {
         try {
           const safe = String(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          out = out.replace(new RegExp(safe, 'gi'), m => `<span class="hl">${m}</span>`);
+          const klass = classes[idx % classes.length];
+          out = out.replace(new RegExp(safe, 'gi'), m => `<span class="${klass}">${m}</span>`);
         } catch (err) {
           console.error('Highlight failed for term', term, err);
         }
@@ -373,34 +727,440 @@
       return out;
     }
 
-    function fillReviewForm(c) {
-      const review = c.review || { status: 'unreviewed', corrected: {}, notes: '' };
-      els.statusBox.value = review.status || 'unreviewed';
-      els.notesBox.value = review.notes || '';
-      els.corrRun.value = review.corrected?.run || '';
-      els.corrSeqType.value = review.corrected?.sequence_type || '';
-      els.corrItemNum.value = review.corrected?.item_num || '';
-      els.corrPaperLabel.value = review.corrected?.paper_label || '';
-      els.corrOutputLabel.value = review.corrected?.output_label || '';
-      els.corrTitle.value = review.corrected?.title || review.corrected?.item_title || '';
+    function rowsForClaimView(c) {
+      const ctx = itemContext(c);
+      if ((ctx.claims || []).length) return ctx.claims;
+      const rows = [];
+      const itemTitle = ctx.item_entries?.[0]?.item_title || c.predicted?.item_title || c.predicted?.item_num || '(item)';
+      (ctx.papers || []).forEach((paper, idx) => rows.push({
+        claim_id: `paper-only::${itemKey(c)}::${idx}`,
+        paper_label: paper.paper_label,
+        item_title: paper.item_title || itemTitle,
+        output_label: null,
+        link_basis: paper.link_basis,
+        link_confidence: paper.link_confidence,
+        evidence: null,
+      }));
+      (ctx.outcomes || []).forEach((outcome, idx) => rows.push({
+        claim_id: `outcome-only::${itemKey(c)}::${idx}`,
+        paper_label: null,
+        item_title: itemTitle,
+        output_label: outcome.output_label,
+        link_basis: outcome.link_basis,
+        link_confidence: outcome.link_confidence,
+        evidence: outcome.evidence,
+      }));
+      return rows;
     }
 
-    function syncReviewFromForm() {
+    function graphData(c) {
+      const ctx = itemContext(c);
+      const nodeMap = new Map();
+      const edgeMap = new Map();
+      const addUnique = (arr, value) => {
+        const clean = (value || '').toString().trim();
+        if (clean && !arr.includes(clean)) arr.push(clean);
+      };
+      const defaultItemTitle = ctx.item_entries?.find(x => x.item_title)?.item_title
+        || c.predicted?.item_title
+        || (c.predicted?.item_num ? `item ${c.predicted.item_num}` : '(item)');
+      const addNode = (type, label, meta = '') => {
+        const cleanLabel = (label || '').toString().trim() || '(missing)';
+        const id = `${type}::${cleanLabel}`;
+        if (!nodeMap.has(id)) nodeMap.set(id, { id, type, label: cleanLabel, meta: [] });
+        addUnique(nodeMap.get(id).meta, meta);
+        return nodeMap.get(id);
+      };
+      const addEdge = (kind, row, sourceType) => {
+        const itemTitle = row.item_title || defaultItemTitle;
+        const paperLabel = row.paper_label || '';
+        const outcomeLabel = row.output_label || '';
+        if (kind === 'paper_item' && !paperLabel) return;
+        if (kind === 'item_outcome' && !outcomeLabel) return;
+        const from = kind === 'paper_item' ? addNode('paper', paperLabel) : addNode('item', itemTitle);
+        const to = kind === 'paper_item' ? addNode('item', itemTitle) : addNode('outcome', outcomeLabel);
+        const id = edgeId(kind, c, { ...row, item_title: itemTitle });
+        if (!edgeMap.has(id)) {
+          edgeMap.set(id, {
+            id,
+            kind,
+            from_id: from.id,
+            to_id: to.id,
+            paper_label: paperLabel,
+            item_title: itemTitle,
+            output_label: outcomeLabel,
+            sources: [],
+            relation_types: [],
+            confidences: [],
+            evidence: [],
+            reasons: [],
+          });
+        }
+        const edge = edgeMap.get(id);
+        addUnique(edge.sources, sourceType);
+        addUnique(edge.relation_types, row.link_basis || row.relation_type);
+        addUnique(edge.confidences, row.link_confidence || row.confidence);
+        addUnique(edge.evidence, row.evidence);
+        addUnique(edge.reasons, row.reason);
+      };
+
+      (ctx.item_entries || []).forEach(entry => {
+        const loc = [entry.item_num, entry.heading_source, entry.start_page != null ? `p.${entry.start_page}` : ''].filter(Boolean).join(' · ');
+        addNode('item', entry.item_title || defaultItemTitle, loc);
+      });
+      addNode('item', defaultItemTitle, c.predicted?.item_num ? `item ${c.predicted.item_num}` : '');
+
+      (ctx.papers || []).forEach(paper => {
+        if (!paper.paper_label) return;
+        const meta = [paper.paper_kind, paper.paper_number, paper.paper_rev].filter(Boolean).join(' ');
+        addNode('paper', paper.paper_label, meta || paper.link_basis || '');
+        addEdge('paper_item', { ...paper, item_title: paper.item_title || defaultItemTitle }, 'paper_item');
+      });
+      (ctx.outcomes || []).forEach(outcome => {
+        if (!outcome.output_label) return;
+        addNode('outcome', outcome.output_label, outcome.title || outcome.output_title || '');
+        addEdge('item_outcome', { ...outcome, item_title: defaultItemTitle }, 'item_output');
+      });
+      (ctx.claims || []).forEach(claim => {
+        if (claim.paper_label) {
+          addNode('paper', claim.paper_label, [claim.paper_kind, claim.paper_number, claim.paper_rev].filter(Boolean).join(' '));
+        }
+        if (claim.output_label) addNode('outcome', claim.output_label, claim.output_title || '');
+        addEdge('paper_item', claim, 'paper_output');
+        addEdge('item_outcome', claim, 'paper_output');
+      });
+
+      const order = { paper: 0, item: 1, outcome: 2 };
+      const nodes = [...nodeMap.values()].sort((a, b) => order[a.type] - order[b.type] || a.label.localeCompare(b.label));
+      const edges = [...edgeMap.values()].sort((a, b) => a.kind.localeCompare(b.kind) || a.from_id.localeCompare(b.from_id) || a.to_id.localeCompare(b.to_id));
+      return { nodes, edges };
+    }
+
+    function graphEdgeAttrs(edge, label) {
+      return `data-edge-id="${attrValue(edge.id)}"
+        data-edge-kind="${attrValue(edge.kind)}"
+        data-edge-label="${attrValue(label)}"
+        data-edge-paper="${attrValue(edge.paper_label || '')}"
+        data-edge-item="${attrValue(edge.item_title || '')}"
+        data-edge-outcome="${attrValue(edge.output_label || '')}"
+        data-edge-from="${attrValue(edge.from_label || '')}"
+        data-edge-to="${attrValue(edge.to_label || '')}"`;
+    }
+
+    function renderClaimChain(c) {
+      const ctx = itemContext(c);
+      const graph = graphData(c);
+      const itemEntries = ctx.item_entries || [];
+      const entryHtml = itemEntries.length
+        ? itemEntries.map(entry => {
+            const loc = [entry.heading_source, entry.start_page != null ? `p.${entry.start_page}` : '', entry.start_line != null ? `line ${entry.start_line}` : ''].filter(Boolean).join(' · ');
+            return `<div class="tight"><strong>${escapeHtml(entry.item_num || c.predicted?.item_num || '?')}</strong> ${escapeHtml(entry.item_title || '(untitled item)')} ${loc ? `<span class="muted">(${escapeHtml(loc)})</span>` : ''}</div>`;
+          }).join('')
+        : `<span class="muted">No item entry metadata in bundle.</span>`;
+      const nodesByType = {
+        paper: graph.nodes.filter(x => x.type === 'paper'),
+        item: graph.nodes.filter(x => x.type === 'item'),
+        outcome: graph.nodes.filter(x => x.type === 'outcome'),
+      };
+      const graphWidth = 920;
+      const nodeW = 220;
+      const nodeH = 78;
+      const gap = 18;
+      const xByType = { paper: 20, item: 350, outcome: 680 };
+      const maxRows = Math.max(nodesByType.paper.length, nodesByType.item.length, nodesByType.outcome.length, 1);
+      const graphHeight = Math.max(260, 24 + maxRows * nodeH + (maxRows - 1) * gap + 24);
+      const nodePosition = new Map();
+      Object.entries(nodesByType).forEach(([type, nodes]) => {
+        const totalH = nodes.length * nodeH + Math.max(0, nodes.length - 1) * gap;
+        const top = Math.max(24, Math.round((graphHeight - totalH) / 2));
+        nodes.forEach((node, idx) => {
+          nodePosition.set(node.id, { x: xByType[type], y: top + idx * (nodeH + gap) });
+        });
+      });
+      const nodeHtml = graph.nodes.map(node => {
+        const pos = nodePosition.get(node.id) || { x: 0, y: 0 };
+        const typeLabel = { paper: 'WP/IP', item: 'Item', outcome: 'Outcome' }[node.type] || node.type;
+        const meta = (node.meta || []).filter(Boolean).slice(0, 2).join(' · ');
+        return `<div class="graph-node-card ${node.type === 'item' ? 'item-node' : node.type}" style="left:${pos.x}px; top:${pos.y}px;" title="${escapeHtml(node.label)}">
+          <strong>${escapeHtml(typeLabel)}</strong>
+          <div>${escapeHtml(node.label)}</div>
+          ${meta ? `<div class="graph-node-meta">${escapeHtml(meta)}</div>` : ''}
+        </div>`;
+      }).join('');
+      const edgeHtml = graph.edges.map(edge => {
+        const from = nodePosition.get(edge.from_id);
+        const to = nodePosition.get(edge.to_id);
+        if (!from || !to) return '';
+        const x1 = from.x + nodeW;
+        const y1 = from.y + nodeH / 2;
+        const x2 = to.x;
+        const y2 = to.y + nodeH / 2;
+        const c1 = x1 + 70;
+        const c2 = x2 - 70;
+        const labelX = Math.round((x1 + x2) / 2);
+        const labelY = Math.round((y1 + y2) / 2) - 6;
+        const review = edgeReview(c, edge.id);
+        const selected = state.selectedEdge?.id === edge.id;
+        const label = edge.kind === 'paper_item' ? 'paper -> item' : 'item -> outcome';
+        const count = edge.sources.length > 1 ? ` · ${edge.sources.length} sources` : '';
+        const fromLabel = graph.nodes.find(x => x.id === edge.from_id)?.label || '';
+        const toLabel = graph.nodes.find(x => x.id === edge.to_id)?.label || '';
+        const attrs = graphEdgeAttrs({ ...edge, from_label: fromLabel, to_label: toLabel }, label);
+        const path = `M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}`;
+        return `
+          <path class="graph-link ${edgeStatusClass(review.status)} ${selected ? 'selected' : ''}" d="${path}"></path>
+          <path class="graph-link-hit" d="${path}" ${attrs}></path>
+          <text class="graph-edge-label ${selected ? 'selected' : ''}" x="${labelX}" y="${labelY}" ${attrs}>${escapeHtml(edgeStatusLabel(review.status) + count)}</text>
+        `;
+      }).join('');
+      const graphHtml = graph.nodes.length
+        ? `<div class="graph-stage">
+            <div class="graph-canvas" style="--graph-height:${graphHeight}px;">
+              <svg class="graph-lines" viewBox="0 0 ${graphWidth} ${graphHeight}" preserveAspectRatio="none" aria-hidden="true">
+                ${edgeHtml}
+              </svg>
+              ${nodeHtml}
+            </div>
+          </div>`
+        : '<div class="graph-empty">No paper, item, or outcome nodes are available for this item.</div>';
+
+      els.claimChainView.innerHTML = `
+        <div class="claim-summary">
+          <div class="claim-summary-box"><strong>Item entry/entries</strong>${entryHtml}</div>
+          <div class="claim-summary-box"><strong>Graph nodes</strong><div class="tight">${nodesByType.paper.length} WP/IP · ${nodesByType.item.length} item · ${nodesByType.outcome.length} outcome</div></div>
+          <div class="claim-summary-box"><strong>Graph edges</strong><div class="tight">${graph.edges.length} unique edge(s)</div></div>
+        </div>
+        ${graphHtml}
+        ${selectedEdgePanel(c)}
+      `;
+      els.claimChainView.querySelectorAll('[data-edge-id]').forEach(el => {
+        el.addEventListener('click', event => {
+          const target = event.currentTarget;
+          state.selectedEdge = {
+            id: readAttrValue(target.dataset.edgeId),
+            itemKey: itemKey(c),
+            kind: readAttrValue(target.dataset.edgeKind),
+            label: readAttrValue(target.dataset.edgeLabel),
+            paper_label: readAttrValue(target.dataset.edgePaper),
+            item_title: readAttrValue(target.dataset.edgeItem),
+            outcome_label: readAttrValue(target.dataset.edgeOutcome),
+            from_label: readAttrValue(target.dataset.edgeFrom),
+            to_label: readAttrValue(target.dataset.edgeTo),
+          };
+          renderClaimChain(c);
+        });
+      });
+      els.claimChainView.querySelectorAll('[data-edge-status]').forEach(el => {
+        el.addEventListener('click', event => {
+          if (!state.selectedEdge) return;
+          setEdgeReview(c, state.selectedEdge.id, { status: event.currentTarget.dataset.edgeStatus });
+          renderClaimChain(c);
+        });
+      });
+      els.claimChainView.querySelectorAll('[data-edge-note]').forEach(el => {
+        el.addEventListener('input', event => {
+          if (!state.selectedEdge) return;
+          setEdgeReview(c, state.selectedEdge.id, { notes: event.target.value });
+        });
+      });
+      els.claimChainView.querySelectorAll('[data-edge-correction]').forEach(el => {
+        el.addEventListener('input', event => {
+          if (!state.selectedEdge) return;
+          setEdgeReview(c, state.selectedEdge.id, { correction: event.target.value });
+        });
+      });
+    }
+
+    function buildClaimReviewRows() {
+      const out = [];
+      const seen = new Set();
+      state.cases.forEach(c => {
+        const ctx = itemContext(c);
+        const key = itemKey(c);
+        const itemTitles = [...new Set((ctx.item_entries || []).map(x => x.item_title).filter(Boolean))].join(' | ');
+        rowsForClaimView(c).forEach(row => {
+          const claimId = row.claim_id || `claim::${key}::${row.paper_label || 'no-paper'}::${row.output_label || 'no-outcome'}`;
+          const dedupeKey = `${key}::${claimId}`;
+          if (seen.has(dedupeKey)) return;
+          seen.add(dedupeKey);
+          const paperEdgeId = row.paper_label ? edgeId('paper_item', c, row) : '';
+          const outcomeEdgeId = row.output_label ? edgeId('item_outcome', c, row) : '';
+          const review = claimReview(c, claimId);
+          const paperEdgeReview = paperEdgeId ? edgeReview(c, paperEdgeId) : {};
+          const outcomeEdgeReview = outcomeEdgeId ? edgeReview(c, outcomeEdgeId) : {};
+          out.push({
+            item_key: key,
+            run: c.predicted?.run || ctx.item_key?.run || '',
+            sequence_id: c.predicted?.sequence_id || ctx.item_key?.sequence_id || '',
+            sequence_type: c.predicted?.sequence_type || ctx.item_key?.sequence_type || '',
+            item_num: c.predicted?.item_num || ctx.item_key?.item_num || '',
+            item_titles: itemTitles || c.predicted?.item_title || '',
+            claim_id: claimId,
+            paper_label: row.paper_label || '',
+            outcome_label: row.output_label || '',
+            link_basis: row.link_basis || row.relation_type || '',
+            link_confidence: row.link_confidence || row.confidence || '',
+            evidence: row.evidence || '',
+            paper_item_valid: review.paper_item_valid || paperEdgeReview.status || '',
+            item_outcome_valid: review.item_outcome_valid || outcomeEdgeReview.status || '',
+            notes: review.notes || '',
+            updated_at: review.updated_at || '',
+            paper_item_edge_id: paperEdgeId,
+            paper_item_edge_status: paperEdgeReview.status || '',
+            paper_item_edge_note: paperEdgeReview.notes || '',
+            paper_item_edge_correction: paperEdgeReview.correction || '',
+            paper_item_edge_updated_at: paperEdgeReview.updated_at || '',
+            item_outcome_edge_id: outcomeEdgeId,
+            item_outcome_edge_status: outcomeEdgeReview.status || '',
+            item_outcome_edge_note: outcomeEdgeReview.notes || '',
+            item_outcome_edge_correction: outcomeEdgeReview.correction || '',
+            item_outcome_edge_updated_at: outcomeEdgeReview.updated_at || '',
+          });
+        });
+      });
+      return out;
+    }
+
+    function buildEdgeReviewRows() {
+      const out = [];
+      const seen = new Set();
+      state.cases.forEach(c => {
+        const ctx = itemContext(c);
+        const key = itemKey(c);
+        const graph = graphData(c);
+        const nodesById = new Map(graph.nodes.map(node => [node.id, node]));
+        graph.edges.forEach(edge => {
+          if (seen.has(edge.id)) return;
+          seen.add(edge.id);
+          const review = edgeReview(c, edge.id);
+          out.push({
+            item_key: key,
+            run: c.predicted?.run || ctx.item_key?.run || '',
+            sequence_id: c.predicted?.sequence_id || ctx.item_key?.sequence_id || '',
+            sequence_type: c.predicted?.sequence_type || ctx.item_key?.sequence_type || '',
+            item_num: c.predicted?.item_num || ctx.item_key?.item_num || '',
+            item_title: edge.item_title || '',
+            edge_id: edge.id,
+            edge_kind: edge.kind,
+            from_label: nodesById.get(edge.from_id)?.label || '',
+            to_label: nodesById.get(edge.to_id)?.label || '',
+            paper_label: edge.paper_label || '',
+            outcome_label: edge.output_label || '',
+            link_basis: edge.relation_types.join(' | '),
+            link_confidence: edge.confidences.join(' | '),
+            evidence: edge.evidence.join(' | '),
+            sources: edge.sources.join(' | '),
+            status: review.status || '',
+            correction: review.correction || '',
+            notes: review.notes || '',
+            updated_at: review.updated_at || '',
+          });
+        });
+      });
+      return out;
+    }
+
+    function renderHighlightLegend(c) {
+      const terms = uniqueTermsForItem(c);
+      const classes = ['hl', 'hl2', 'hl3', 'hl4', 'hl5'];
+      if (!terms.length) {
+        els.highlightLegend.innerHTML = '';
+        return;
+      }
+      els.highlightLegend.innerHTML = terms.map((term, idx) => `<span class="${classes[idx % classes.length]}" style="margin-right:8px;">${escapeHtml(term)}</span>`).join('');
+    }
+
+    function normalizedLink(link) {
+      return {
+        paper_label: link?.paper_label || null,
+        output_label: link?.output_label || null,
+        relation_type: link?.relation_type || null,
+        confidence: link?.confidence || null,
+        reason: link?.reason || null,
+        evidence: link?.evidence || null,
+      };
+    }
+
+    function correctedLinks(c) {
+      const existing = c.review?.corrected_links;
+      if (Array.isArray(existing)) return existing;
+      return claimRows(c).map(link => normalizedLink(link));
+    }
+
+    function linksEqual(a, b) {
+      return JSON.stringify((a || []).map(normalizedLink)) === JSON.stringify((b || []).map(normalizedLink));
+    }
+
+    function renderCorrectedLinksEditor(c) {
+      const links = correctedLinks(c);
+      if (!links.length) {
+        els.correctedLinksEditor.innerHTML = '<div class="muted">No corrected links. Click <strong>Add link</strong> to create one.</div>';
+        return;
+      }
+      els.correctedLinksEditor.innerHTML = links.map((link, idx) => `
+        <div class="link-editor-row">
+          <input data-link-field="paper_label" data-link-idx="${idx}" value="${escapeHtml(link.paper_label || '')}" placeholder="paper label">
+          <input data-link-field="output_label" data-link-idx="${idx}" value="${escapeHtml(link.output_label || '')}" placeholder="output label">
+          <input data-link-field="relation_type" data-link-idx="${idx}" value="${escapeHtml(link.relation_type || '')}" placeholder="relation type">
+          <input data-link-field="confidence" data-link-idx="${idx}" value="${escapeHtml(link.confidence || '')}" placeholder="confidence">
+          <button data-delete-link="${idx}" class="bad">Delete</button>
+          <textarea data-link-field="reason" data-link-idx="${idx}" placeholder="reason">${escapeHtml(link.reason || '')}</textarea>
+          <textarea data-link-field="evidence" data-link-idx="${idx}" placeholder="evidence">${escapeHtml(link.evidence || '')}</textarea>
+        </div>
+      `).join('');
+      els.correctedLinksEditor.querySelectorAll('[data-link-field]').forEach(el => el.addEventListener('input', syncReviewFromForm));
+      els.correctedLinksEditor.querySelectorAll('[data-delete-link]').forEach(btn => btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.deleteLink);
+        const cc = currentCase();
+        cc.review.corrected_links.splice(idx, 1);
+        syncReviewFromForm(true);
+      }));
+    }
+
+    function fillReviewForm(c) {
+      const review = ensureReview(c);
+      if (!Array.isArray(review.corrected_links)) review.corrected_links = claimRows(c).map(link => normalizedLink(link));
+      c.review = review;
+      els.statusBox.value = review.status || 'unreviewed';
+      els.notesBox.value = review.notes || '';
+      els.editReasonBox.value = review.edit_reason || '';
+      renderCorrectedLinksEditor(c);
+    }
+
+    function syncReviewFromForm(skipRerender = false) {
       const c = currentCase();
       if (!c) return;
-      c.review = c.review || { status: 'unreviewed', corrected: {}, notes: '' };
+      ensureReview(c);
       c.review.notes = els.notesBox.value;
-      c.review.corrected = {
-        run: els.corrRun.value || null,
-        sequence_type: els.corrSeqType.value || null,
-        item_num: els.corrItemNum.value || null,
-        paper_label: els.corrPaperLabel.value || null,
-        output_label: els.corrOutputLabel.value || null,
-        title: els.corrTitle.value || null,
-      };
+      c.review.edit_reason = els.editReasonBox.value;
+      const edited = [];
+      const rows = els.correctedLinksEditor.querySelectorAll('.link-editor-row');
+      rows.forEach(row => {
+        const get = field => row.querySelector(`[data-link-field="${field}"]`)?.value || '';
+        edited.push({
+          paper_label: get('paper_label') || null,
+          output_label: get('output_label') || null,
+          relation_type: get('relation_type') || null,
+          confidence: get('confidence') || null,
+          reason: get('reason') || null,
+          evidence: get('evidence') || null,
+        });
+      });
+      const predicted = claimRows(c).map(normalizedLink);
+      c.review.corrected_links = edited;
+      if (!linksEqual(predicted, edited) && !c.review.edit_reason) {
+        const why = prompt('Why was this item edited?');
+        if (why !== null) {
+          c.review.edit_reason = why;
+          els.editReasonBox.value = why;
+        }
+      }
       persistReviews();
       renderCaseList();
       renderSummary();
+      if (!skipRerender) {
+        renderClaimChain(c);
+      }
     }
 
     function renderCase() {
@@ -412,20 +1172,19 @@
       }
       els.emptyState.style.display = 'none';
       els.caseView.style.display = 'block';
+      if (state.selectedEdge?.itemKey !== itemKey(c)) state.selectedEdge = null;
       const status = c.review?.status || 'unreviewed';
       els.caseTitle.textContent = `${c.case_id} — ${c.case_type}`;
-      els.caseMeta.textContent = `${c.predicted.run || ''} · item ${c.predicted.item_num || '?'} · ${status}`;
+      const linkCount = c.predicted?.link_count;
+      els.caseMeta.textContent = `${c.predicted.run || ''} · item ${c.predicted.item_num || '?'} · ${status}${linkCount != null ? ` · ${linkCount} link(s)` : ''}`;
       els.predictedBlock.textContent = pretty(c.predicted);
       els.evidenceBlock.textContent = c.evidence?.primary_evidence || '';
       els.metaBlock.textContent = pretty(c.evidence?.item_metadata || {});
-      const terms = [
-        c.predicted.paper_label,
-        c.predicted.output_label,
-        c.predicted.item_title,
-        els.highlightBox.value.trim() || null,
-      ];
+      const terms = uniqueTermsForItem(c);
       els.itemTextBlock.innerHTML = highlightText(c.evidence?.item_text || '', terms);
+      renderHighlightLegend(c);
       fillReviewForm(c);
+      renderClaimChain(c);
       els.storageKeyBox.value = state.storageKey || '';
     }
 
@@ -448,8 +1207,9 @@
       state.bundle = bundle;
       state.cases = bundle.cases.map(c => ({
         ...c,
-        review: c.review || { status: 'unreviewed', corrected: {}, notes: '' },
+        review: c.review || { status: 'unreviewed', corrected_links: [], edit_reason: '', notes: '', claim_reviews: {}, edge_reviews: {} },
       }));
+      state.cases.forEach(ensureReview);
       state.storageKey = makeStorageKey(bundle);
       loadPersistedReviews();
       state.activeIndex = 0;
@@ -463,6 +1223,8 @@
       const out = {
         ...state.bundle,
         cases: state.cases,
+        claim_review_rows: buildClaimReviewRows(),
+        edge_review_rows: buildEdgeReviewRows(),
       };
       const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -495,12 +1257,22 @@
     });
 
     els.downloadReviews.addEventListener('click', downloadReviews);
+    els.addLinkBtn.addEventListener('click', () => {
+      const c = currentCase();
+      if (!c) return;
+      ensureReview(c);
+      if (!Array.isArray(c.review.corrected_links)) c.review.corrected_links = [];
+      c.review.corrected_links.push({ paper_label: null, output_label: null, relation_type: null, confidence: null, reason: null, evidence: null });
+      renderCorrectedLinksEditor(c);
+      persistReviews();
+      renderClaimChain(c);
+    });
     els.filterType.addEventListener('change', applyFilters);
     els.filterStatus.addEventListener('change', applyFilters);
     els.searchBox.addEventListener('input', applyFilters);
     els.highlightBox.addEventListener('input', renderCase);
 
-    [els.notesBox, els.corrRun, els.corrSeqType, els.corrItemNum, els.corrPaperLabel, els.corrOutputLabel, els.corrTitle]
+    [els.notesBox, els.editReasonBox]
       .forEach(el => el.addEventListener('input', syncReviewFromForm));
 
     els.acceptBtn.addEventListener('click', () => setStatus('accepted'));

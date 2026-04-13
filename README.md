@@ -51,16 +51,8 @@ Export a manual-validation bundle from the rule-based links:
 python -m atlas.support_tracer_cli export-validation --output-path validation_bundle.json
 ```
 
-Or classify item content with the OpenAI API (`gpt-5.4-mini`) and export an LLM validation bundle. This extracts:
-- outputs mentioned in the item
-- papers mentioned in the item
+Or classify item content with Gemma (`gemma-4-26b-a4b-it`) and export an LLM validation bundle. This extracts:
 - direct paper -> output links inferred from the item text
-
-Set your API key first:
-
-```bash
-export OPENAI_API_KEY=...
-```
 
 Then run:
 
@@ -69,6 +61,12 @@ python -m atlas.support_tracer_cli classify-items-llm --limit 30 --workers 4
 ```
 
 Then open `manual_validation.html` in a browser and load the exported JSON file.
+The validator shows the selected case alongside a deduplicated item-level graph:
+paper(s) -> item entry/entries -> outcome(s). Click an edge to approve, reject,
+correct, or skip that inference. Review downloads include
+`claim_review_rows` and `edge_review_rows` so paper-to-item and
+item-to-outcome validity can be reconstructed without re-opening the browser
+state.
 
 Build the backend:
 

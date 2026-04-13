@@ -54,7 +54,7 @@ def parse_args() -> argparse.Namespace:
     validation.add_argument("--sample-per-case-type", type=int, default=None)
     validation.add_argument("--random-seed", type=int, default=0)
 
-    llm = sub.add_parser("classify-items-llm", help="Classify extracted items with Codex/gpt-5.4-mini and write JSONL results.")
+    llm = sub.add_parser("classify-items-llm", help="Classify extracted items with Gemma and write JSONL results.")
     llm.add_argument("--marker-dir", type=Path, default=MARKER_DIR)
     llm.add_argument("--prompt-path", type=Path, default=DEFAULT_PROMPT_PATH)
     llm.add_argument("--output-path", type=Path, default=DEFAULT_CLASSIFICATIONS_PATH)
