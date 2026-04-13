@@ -122,6 +122,8 @@
         <div id="summary" class="small muted">No bundle loaded.</div>
       </div>
 
+      <div id="errorBox" class="card small" style="display:none; color:#fecaca; border-color:#7f1d1d;"></div>
+
       <div id="caseList" class="list"></div>
     </aside>
 
@@ -251,13 +253,24 @@
       corrOutputLabel: document.getElementById('corrOutputLabel'),
       corrTitle: document.getElementById('corrTitle'),
       highlightBox: document.getElementById('highlightBox'),
+      errorBox: document.getElementById('errorBox'),
     };
+
+    function showError(message) {
+      els.errorBox.style.display = 'block';
+      els.errorBox.textContent = message;
+    }
+
+    function clearError() {
+      els.errorBox.style.display = 'none';
+      els.errorBox.textContent = '';
+    }
 
     function escapeHtml(str) {
       return (str ?? '').toString()
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
     }
 
     function pretty(obj) {
@@ -350,8 +363,12 @@
     function highlightText(text, terms) {
       let out = escapeHtml(text || '');
       terms.filter(Boolean).forEach(term => {
-        const safe = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        out = out.replace(new RegExp(safe, 'gi'), m => `<span class="hl">${m}</span>`);
+        try {
+          const safe = String(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          out = out.replace(new RegExp(safe, 'gi'), m => `<span class="hl">${m}</span>`);
+        } catch (err) {
+          console.error('Highlight failed for term', term, err);
+        }
       });
       return out;
     }
@@ -424,8 +441,12 @@
     }
 
     function loadBundle(bundle) {
+      clearError();
+      if (!bundle || !Array.isArray(bundle.cases)) {
+        throw new Error('Bundle JSON must contain a top-level `cases` array.');
+      }
       state.bundle = bundle;
-      state.cases = (bundle.cases || []).map(c => ({
+      state.cases = bundle.cases.map(c => ({
         ...c,
         review: c.review || { status: 'unreviewed', corrected: {}, notes: '' },
       }));
@@ -433,6 +454,7 @@
       loadPersistedReviews();
       state.activeIndex = 0;
       applyFilters();
+      renderCase();
     }
 
     function downloadReviews() {
@@ -451,15 +473,25 @@
     }
 
     els.bundleFile.addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      loadBundle(JSON.parse(await file.text()));
+      try {
+        const file = event.target.files[0];
+        if (!file) return;
+        loadBundle(JSON.parse(await file.text()));
+      } catch (err) {
+        console.error(err);
+        showError(`Failed to load bundle: ${err.message}`);
+      }
     });
 
     els.loadSample.addEventListener('click', () => {
-      const raw = prompt('Paste validation bundle JSON');
-      if (!raw) return;
-      loadBundle(JSON.parse(raw));
+      try {
+        const raw = prompt('Paste validation bundle JSON');
+        if (!raw) return;
+        loadBundle(JSON.parse(raw));
+      } catch (err) {
+        console.error(err);
+        showError(`Failed to load pasted JSON: ${err.message}`);
+      }
     });
 
     els.downloadReviews.addEventListener('click', downloadReviews);
