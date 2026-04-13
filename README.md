@@ -51,7 +51,10 @@ Export a manual-validation bundle from the rule-based links:
 python -m atlas.support_tracer_cli export-validation --output-path validation_bundle.json
 ```
 
-Or classify items with Codex / gpt-5.4-mini and export an LLM validation bundle:
+Or classify item content with Codex / gpt-5.4-mini and export an LLM validation bundle. This extracts:
+- outputs mentioned in the item
+- papers mentioned in the item
+- direct paper -> output links inferred from the item text
 
 ```bash
 python -m atlas.support_tracer_cli classify-items-llm --limit 30 --workers 4
