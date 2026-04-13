@@ -53,6 +53,8 @@ def build_validation_cases(
     run: str | None = None,
     case_types: tuple[str, ...] = ("item_output", "paper_item", "paper_output"),
     limit: int | None = None,
+    sample_per_case_type: int | None = None,
+    random_seed: int = 0,
 ) -> list[dict[str, Any]]:
     items, item_output, paper_item, paper_output = _join_items(marker_dir)
     item_cols = [
@@ -222,6 +224,16 @@ def build_validation_cases(
                 }
             )
 
+    if sample_per_case_type is not None:
+        sampled: list[dict[str, Any]] = []
+        rng = __import__("random").Random(random_seed)
+        for case_type in case_types:
+            pool = [case for case in cases if case["case_type"] == case_type]
+            if len(pool) <= sample_per_case_type:
+                sampled.extend(pool)
+            else:
+                sampled.extend(rng.sample(pool, sample_per_case_type))
+        cases = sampled
     if limit is not None:
         cases = cases[:limit]
     return cases
@@ -233,6 +245,8 @@ def export_validation_bundle(
     run: str | None = None,
     case_types: tuple[str, ...] = ("item_output", "paper_item", "paper_output"),
     limit: int | None = None,
+    sample_per_case_type: int | None = None,
+    random_seed: int = 0,
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     bundle = {
@@ -241,7 +255,14 @@ def export_validation_bundle(
         "run_filter": run,
         "case_types": list(case_types),
         "case_count": 0,
-        "cases": build_validation_cases(marker_dir=marker_dir, run=run, case_types=case_types, limit=limit),
+        "cases": build_validation_cases(
+            marker_dir=marker_dir,
+            run=run,
+            case_types=case_types,
+            limit=limit,
+            sample_per_case_type=sample_per_case_type,
+            random_seed=random_seed,
+        ),
     }
     bundle["case_count"] = len(bundle["cases"])
     output_path.write_text(json.dumps(bundle, ensure_ascii=False, indent=2))

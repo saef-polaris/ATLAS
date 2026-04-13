@@ -43,6 +43,8 @@ def parse_args() -> argparse.Namespace:
         help="Repeat to include multiple case types. Defaults to all.",
     )
     validation.add_argument("--limit", type=int, default=None)
+    validation.add_argument("--sample-per-case-type", type=int, default=None)
+    validation.add_argument("--random-seed", type=int, default=0)
 
     q_out = sub.add_parser("output", help="Trace a formal output to items and papers.")
     q_out.add_argument("label")
@@ -80,6 +82,8 @@ def main() -> None:
             run=args.run,
             case_types=tuple(args.case_types or ["item_output", "paper_item", "paper_output"]),
             limit=args.limit,
+            sample_per_case_type=args.sample_per_case_type,
+            random_seed=args.random_seed,
         )
         print(bundle_path)
         return
