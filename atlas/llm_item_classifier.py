@@ -9,6 +9,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import sys
+
 import pandas as pd
 
 from .config import ensure_data_dir, get_marker_dir
@@ -210,6 +212,7 @@ def classify_items(
     limit: int | None = None,
     workers: int = 4,
     overwrite: bool = False,
+    show_progress: bool = True,
 ) -> Path:
     items = load_items(marker_dir=marker_dir, run=run, limit=limit)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -224,15 +227,40 @@ def classify_items(
     pending = [item for item in items if overwrite or item["item_id"] not in existing]
     results = list(existing.values())
 
+    total = len(items)
+    skipped = len(existing) if not overwrite else 0
+    if show_progress:
+        print(
+            f"[llm] loaded={total} pending={len(pending)} skipped={skipped} workers={max(1, workers)} model={model}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    completed = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
         futures = {ex.submit(classify_item, item, prompt_path, model): item for item in pending}
         for fut in as_completed(futures):
-            results.append(fut.result())
+            item = futures[fut]
+            try:
+                results.append(fut.result())
+            except Exception as exc:
+                if show_progress:
+                    print(f"[llm] error item_id={item['item_id']} error={exc}", file=sys.stderr, flush=True)
+                raise
+            completed += 1
             output_path.write_text(
                 "\n".join(json.dumps(rec, ensure_ascii=False) for rec in sorted(results, key=lambda r: r["item_id"])) + "\n"
             )
+            if show_progress:
+                print(
+                    f"[llm] completed={completed}/{len(pending)} item_id={item['item_id']}",
+                    file=sys.stderr,
+                    flush=True,
+                )
     if not results:
         output_path.write_text("")
+    elif show_progress:
+        print(f"[llm] wrote {output_path}", file=sys.stderr, flush=True)
     return output_path
 
 

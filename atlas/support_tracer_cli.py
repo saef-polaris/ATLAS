@@ -64,6 +64,7 @@ def parse_args() -> argparse.Namespace:
     llm.add_argument("--limit", type=int, default=None)
     llm.add_argument("--workers", type=int, default=4)
     llm.add_argument("--overwrite", action="store_true")
+    llm.add_argument("--quiet", action="store_true")
 
     llm_bundle = sub.add_parser("export-llm-validation", help="Export manual-validation bundle from LLM item classifications.")
     llm_bundle.add_argument("--classifications-path", type=Path, default=DEFAULT_CLASSIFICATIONS_PATH)
@@ -121,6 +122,7 @@ def main() -> None:
             limit=args.limit,
             workers=args.workers,
             overwrite=args.overwrite,
+            show_progress=not args.quiet,
         )
         bundle_path = export_llm_validation_bundle(classifications_path=output_path, output_path=args.bundle_path)
         print(json.dumps({"classifications": str(output_path), "bundle": str(bundle_path)}, ensure_ascii=False))
