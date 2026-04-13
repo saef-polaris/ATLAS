@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from .config import DEFAULT_DATA_REPO, ensure_data_dir, get_data_dir
+from .manual_validation import DEFAULT_BUNDLE_PATH, export_validation_bundle
 from .support_tracer_backend import (
     DB_PATH,
     MARKER_DIR,
@@ -29,6 +30,19 @@ def parse_args() -> argparse.Namespace:
     build.add_argument("--marker-dir", type=Path, default=MARKER_DIR)
     build.add_argument("--parquet-dir", type=Path, default=PARQUET_DIR)
     build.add_argument("--db-path", type=Path, default=DB_PATH)
+
+    validation = sub.add_parser("export-validation", help="Export a JSON bundle for the manual validation HTML interface.")
+    validation.add_argument("--output-path", type=Path, default=DEFAULT_BUNDLE_PATH)
+    validation.add_argument("--marker-dir", type=Path, default=MARKER_DIR)
+    validation.add_argument("--run", default=None)
+    validation.add_argument(
+        "--case-type",
+        action="append",
+        choices=["item_output", "paper_item", "paper_output"],
+        dest="case_types",
+        help="Repeat to include multiple case types. Defaults to all.",
+    )
+    validation.add_argument("--limit", type=int, default=None)
 
     q_out = sub.add_parser("output", help="Trace a formal output to items and papers.")
     q_out.add_argument("label")
@@ -58,6 +72,16 @@ def main() -> None:
     if args.command == "build-db":
         db_path = build_or_refresh_database(marker_dir=args.marker_dir, parquet_dir=args.parquet_dir, db_path=args.db_path)
         print(db_path)
+        return
+    if args.command == "export-validation":
+        bundle_path = export_validation_bundle(
+            output_path=args.output_path,
+            marker_dir=args.marker_dir,
+            run=args.run,
+            case_types=tuple(args.case_types or ["item_output", "paper_item", "paper_output"]),
+            limit=args.limit,
+        )
+        print(bundle_path)
         return
     if args.command == "output":
         result = query_by_output(args.label, db_path=args.db_path)

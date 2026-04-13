@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ATLAS Manual Validation</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --bad: #ef4444;
+      --warn: #f59e0b;
+      --border: #334155;
+      --hl: #fef08a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    .app {
+      display: grid; grid-template-columns: 320px 1fr; min-height: 100vh;
+    }
+    .sidebar, .main { padding: 16px; }
+    .sidebar {
+      background: var(--panel); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .main { background: #0b1220; }
+    h1, h2, h3 { margin: 0 0 8px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+      margin-bottom: 12px;
+    }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    input, select, textarea, button {
+      width: 100%; background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    }
+    button { cursor: pointer; width: auto; }
+    button.primary { background: #0c4a6e; }
+    button.ok { background: #14532d; }
+    button.bad { background: #7f1d1d; }
+    button.warn { background: #78350f; }
+    .pill {
+      display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px;
+      border: 1px solid var(--border); color: var(--muted);
+    }
+    .list {
+      overflow: auto; border: 1px solid var(--border); border-radius: 10px; min-height: 220px;
+      max-height: 48vh;
+    }
+    .item {
+      padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;
+    }
+    .item:hover, .item.active { background: #172033; }
+    .muted { color: var(--muted); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    pre {
+      white-space: pre-wrap; word-wrap: break-word; background: #020617;
+      border: 1px solid var(--border); padding: 12px; border-radius: 8px; max-height: 40vh; overflow: auto;
+    }
+    .hl { background: var(--hl); color: #111827; padding: 0 2px; border-radius: 2px; }
+    .status-unreviewed { color: var(--muted); }
+    .status-accepted { color: var(--ok); }
+    .status-rejected { color: var(--bad); }
+    .status-corrected { color: var(--accent); }
+    .status-skipped { color: var(--warn); }
+    .tight { margin-top: 8px; }
+    .small { font-size: 12px; }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .grid2, .grid3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div>
+        <h1>ATLAS validation</h1>
+        <div class="muted small">Load a JSON bundle exported by <code>atlas export-validation</code>.</div>
+      </div>
+
+      <div class="card">
+        <label for="bundleFile">Validation bundle</label>
+        <input id="bundleFile" type="file" accept="application/json">
+        <div class="row tight">
+          <button id="loadSample" class="primary">Load from pasted JSON</button>
+          <button id="downloadReviews">Download reviews</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <label for="filterType">Filter case type</label>
+        <select id="filterType">
+          <option value="all">all</option>
+          <option value="item_output">item_output</option>
+          <option value="paper_item">paper_item</option>
+          <option value="paper_output">paper_output</option>
+        </select>
+        <label class="tight" for="filterStatus">Filter status</label>
+        <select id="filterStatus">
+          <option value="all">all</option>
+          <option value="unreviewed">unreviewed</option>
+          <option value="accepted">accepted</option>
+          <option value="corrected">corrected</option>
+          <option value="rejected">rejected</option>
+          <option value="skipped">skipped</option>
+        </select>
+        <label class="tight" for="searchBox">Search</label>
+        <input id="searchBox" placeholder="run, paper, output, item...">
+      </div>
+
+      <div class="card">
+        <div id="summary" class="small muted">No bundle loaded.</div>
+      </div>
+
+      <div id="caseList" class="list"></div>
+    </aside>
+
+    <main class="main">
+      <div id="emptyState" class="card">
+        <h2>No case loaded</h2>
+        <p class="muted">Export a bundle with:</p>
+        <pre>python -m atlas.support_tracer_cli export-validation --output-path validation_bundle.json</pre>
+        <p class="muted">Then open it here.</p>
+      </div>
+
+      <div id="caseView" style="display:none;">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;">
+            <div>
+              <h2 id="caseTitle"></h2>
+              <div id="caseMeta" class="muted small"></div>
+            </div>
+            <div class="row">
+              <button id="prevBtn">← Prev</button>
+              <button id="nextBtn">Next →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <h3>Predicted link</h3>
+            <pre id="predictedBlock"></pre>
+          </div>
+          <div class="card">
+            <h3>Review</h3>
+            <div class="row tight">
+              <button class="ok" id="acceptBtn">Accept (A)</button>
+              <button class="primary" id="correctBtn">Mark corrected (C)</button>
+              <button class="bad" id="rejectBtn">Reject (R)</button>
+              <button class="warn" id="skipBtn">Skip (S)</button>
+            </div>
+            <div class="grid2 tight">
+              <div>
+                <label>Status</label>
+                <input id="statusBox" readonly>
+              </div>
+              <div>
+                <label>Autosave key</label>
+                <input id="storageKeyBox" readonly>
+              </div>
+            </div>
+            <label class="tight" for="notesBox">Notes</label>
+            <textarea id="notesBox" rows="4" placeholder="Why accepted? What needs correction?"></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Corrections</h3>
+          <div class="grid3">
+            <div><label>Corrected run</label><input id="corrRun"></div>
+            <div><label>Corrected sequence type</label><input id="corrSeqType"></div>
+            <div><label>Corrected item num</label><input id="corrItemNum"></div>
+            <div><label>Corrected paper label</label><input id="corrPaperLabel"></div>
+            <div><label>Corrected output label</label><input id="corrOutputLabel"></div>
+            <div><label>Corrected title / item title</label><input id="corrTitle"></div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <h3>Primary evidence</h3>
+            <pre id="evidenceBlock"></pre>
+          </div>
+          <div class="card">
+            <h3>Item metadata</h3>
+            <pre id="metaBlock"></pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between;">
+            <h3>Item text</h3>
+            <input id="highlightBox" style="max-width:320px;" placeholder="extra highlight term">
+          </div>
+          <pre id="itemTextBlock"></pre>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const state = {
+      bundle: null,
+      cases: [],
+      filtered: [],
+      activeIndex: 0,
+      storageKey: null,
+    };
+
+    const els = {
+      bundleFile: document.getElementById('bundleFile'),
+      loadSample: document.getElementById('loadSample'),
+      downloadReviews: document.getElementById('downloadReviews'),
+      filterType: document.getElementById('filterType'),
+      filterStatus: document.getElementById('filterStatus'),
+      searchBox: document.getElementById('searchBox'),
+      summary: document.getElementById('summary'),
+      caseList: document.getElementById('caseList'),
+      emptyState: document.getElementById('emptyState'),
+      caseView: document.getElementById('caseView'),
+      caseTitle: document.getElementById('caseTitle'),
+      caseMeta: document.getElementById('caseMeta'),
+      predictedBlock: document.getElementById('predictedBlock'),
+      evidenceBlock: document.getElementById('evidenceBlock'),
+      metaBlock: document.getElementById('metaBlock'),
+      itemTextBlock: document.getElementById('itemTextBlock'),
+      acceptBtn: document.getElementById('acceptBtn'),
+      correctBtn: document.getElementById('correctBtn'),
+      rejectBtn: document.getElementById('rejectBtn'),
+      skipBtn: document.getElementById('skipBtn'),
+      prevBtn: document.getElementById('prevBtn'),
+      nextBtn: document.getElementById('nextBtn'),
+      notesBox: document.getElementById('notesBox'),
+      statusBox: document.getElementById('statusBox'),
+      storageKeyBox: document.getElementById('storageKeyBox'),
+      corrRun: document.getElementById('corrRun'),
+      corrSeqType: document.getElementById('corrSeqType'),
+      corrItemNum: document.getElementById('corrItemNum'),
+      corrPaperLabel: document.getElementById('corrPaperLabel'),
+      corrOutputLabel: document.getElementById('corrOutputLabel'),
+      corrTitle: document.getElementById('corrTitle'),
+      highlightBox: document.getElementById('highlightBox'),
+    };
+
+    function escapeHtml(str) {
+      return (str ?? '').toString()
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    }
+
+    function pretty(obj) {
+      return JSON.stringify(obj ?? {}, null, 2);
+    }
+
+    function currentCase() {
+      return state.filtered[state.activeIndex] ?? null;
+    }
+
+    function searchText(c) {
+      return JSON.stringify(c).toLowerCase();
+    }
+
+    function makeStorageKey(bundle) {
+      return `atlas-validation::${bundle.marker_dir || 'unknown'}::${bundle.generated_at || 'na'}`;
+    }
+
+    function loadPersistedReviews() {
+      if (!state.storageKey) return;
+      const raw = localStorage.getItem(state.storageKey);
+      if (!raw) return;
+      const persisted = JSON.parse(raw);
+      const byId = new Map((persisted.cases || []).map(c => [c.case_id, c.review]));
+      state.cases.forEach(c => {
+        if (byId.has(c.case_id)) c.review = byId.get(c.case_id);
+      });
+    }
+
+    function persistReviews() {
+      if (!state.storageKey || !state.bundle) return;
+      const payload = {
+        marker_dir: state.bundle.marker_dir,
+        generated_at: state.bundle.generated_at,
+        cases: state.cases.map(c => ({ case_id: c.case_id, review: c.review })),
+      };
+      localStorage.setItem(state.storageKey, JSON.stringify(payload));
+    }
+
+    function applyFilters() {
+      const type = els.filterType.value;
+      const status = els.filterStatus.value;
+      const needle = els.searchBox.value.trim().toLowerCase();
+      state.filtered = state.cases.filter(c => {
+        if (type !== 'all' && c.case_type !== type) return false;
+        if (status !== 'all' && (c.review?.status || 'unreviewed') !== status) return false;
+        if (needle && !searchText(c).includes(needle)) return false;
+        return true;
+      });
+      if (state.activeIndex >= state.filtered.length) state.activeIndex = 0;
+      renderSummary();
+      renderCaseList();
+      renderCase();
+    }
+
+    function renderSummary() {
+      if (!state.bundle) {
+        els.summary.textContent = 'No bundle loaded.';
+        return;
+      }
+      const counts = { unreviewed: 0, accepted: 0, corrected: 0, rejected: 0, skipped: 0 };
+      state.cases.forEach(c => counts[c.review?.status || 'unreviewed']++);
+      els.summary.innerHTML = `
+        <div><strong>${state.cases.length}</strong> cases loaded</div>
+        <div class="small muted">filtered: ${state.filtered.length}</div>
+        <div class="small">accepted ${counts.accepted} · corrected ${counts.corrected} · rejected ${counts.rejected} · skipped ${counts.skipped} · unreviewed ${counts.unreviewed}</div>
+      `;
+      els.storageKeyBox.value = state.storageKey || '';
+    }
+
+    function renderCaseList() {
+      els.caseList.innerHTML = '';
+      state.filtered.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = `item ${idx === state.activeIndex ? 'active' : ''}`;
+        const status = c.review?.status || 'unreviewed';
+        div.innerHTML = `
+          <div class="row" style="justify-content:space-between;">
+            <strong>${escapeHtml(c.case_id)}</strong>
+            <span class="pill status-${status}">${status}</span>
+          </div>
+          <div class="small muted">${escapeHtml(c.case_type)} · ${escapeHtml(c.predicted.run || '')}</div>
+          <div class="small">${escapeHtml(c.predicted.output_label || c.predicted.paper_label || c.predicted.item_title || '')}</div>
+        `;
+        div.onclick = () => { state.activeIndex = idx; renderCaseList(); renderCase(); };
+        els.caseList.appendChild(div);
+      });
+    }
+
+    function highlightText(text, terms) {
+      let out = escapeHtml(text || '');
+      terms.filter(Boolean).forEach(term => {
+        const safe = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        out = out.replace(new RegExp(safe, 'gi'), m => `<span class="hl">${m}</span>`);
+      });
+      return out;
+    }
+
+    function fillReviewForm(c) {
+      const review = c.review || { status: 'unreviewed', corrected: {}, notes: '' };
+      els.statusBox.value = review.status || 'unreviewed';
+      els.notesBox.value = review.notes || '';
+      els.corrRun.value = review.corrected?.run || '';
+      els.corrSeqType.value = review.corrected?.sequence_type || '';
+      els.corrItemNum.value = review.corrected?.item_num || '';
+      els.corrPaperLabel.value = review.corrected?.paper_label || '';
+      els.corrOutputLabel.value = review.corrected?.output_label || '';
+      els.corrTitle.value = review.corrected?.title || review.corrected?.item_title || '';
+    }
+
+    function syncReviewFromForm() {
+      const c = currentCase();
+      if (!c) return;
+      c.review = c.review || { status: 'unreviewed', corrected: {}, notes: '' };
+      c.review.notes = els.notesBox.value;
+      c.review.corrected = {
+        run: els.corrRun.value || null,
+        sequence_type: els.corrSeqType.value || null,
+        item_num: els.corrItemNum.value || null,
+        paper_label: els.corrPaperLabel.value || null,
+        output_label: els.corrOutputLabel.value || null,
+        title: els.corrTitle.value || null,
+      };
+      persistReviews();
+      renderCaseList();
+      renderSummary();
+    }
+
+    function renderCase() {
+      const c = currentCase();
+      if (!c) {
+        els.emptyState.style.display = 'block';
+        els.caseView.style.display = 'none';
+        return;
+      }
+      els.emptyState.style.display = 'none';
+      els.caseView.style.display = 'block';
+      const status = c.review?.status || 'unreviewed';
+      els.caseTitle.textContent = `${c.case_id} — ${c.case_type}`;
+      els.caseMeta.textContent = `${c.predicted.run || ''} · item ${c.predicted.item_num || '?'} · ${status}`;
+      els.predictedBlock.textContent = pretty(c.predicted);
+      els.evidenceBlock.textContent = c.evidence?.primary_evidence || '';
+      els.metaBlock.textContent = pretty(c.evidence?.item_metadata || {});
+      const terms = [
+        c.predicted.paper_label,
+        c.predicted.output_label,
+        c.predicted.item_title,
+        els.highlightBox.value.trim() || null,
+      ];
+      els.itemTextBlock.innerHTML = highlightText(c.evidence?.item_text || '', terms);
+      fillReviewForm(c);
+      els.storageKeyBox.value = state.storageKey || '';
+    }
+
+    function setStatus(status) {
+      const c = currentCase();
+      if (!c) return;
+      syncReviewFromForm();
+      c.review.status = status;
+      persistReviews();
+      renderCase();
+      renderCaseList();
+      renderSummary();
+    }
+
+    function loadBundle(bundle) {
+      state.bundle = bundle;
+      state.cases = (bundle.cases || []).map(c => ({
+        ...c,
+        review: c.review || { status: 'unreviewed', corrected: {}, notes: '' },
+      }));
+      state.storageKey = makeStorageKey(bundle);
+      loadPersistedReviews();
+      state.activeIndex = 0;
+      applyFilters();
+    }
+
+    function downloadReviews() {
+      if (!state.bundle) return;
+      syncReviewFromForm();
+      const out = {
+        ...state.bundle,
+        cases: state.cases,
+      };
+      const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'validation_reviews.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    els.bundleFile.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      loadBundle(JSON.parse(await file.text()));
+    });
+
+    els.loadSample.addEventListener('click', () => {
+      const raw = prompt('Paste validation bundle JSON');
+      if (!raw) return;
+      loadBundle(JSON.parse(raw));
+    });
+
+    els.downloadReviews.addEventListener('click', downloadReviews);
+    els.filterType.addEventListener('change', applyFilters);
+    els.filterStatus.addEventListener('change', applyFilters);
+    els.searchBox.addEventListener('input', applyFilters);
+    els.highlightBox.addEventListener('input', renderCase);
+
+    [els.notesBox, els.corrRun, els.corrSeqType, els.corrItemNum, els.corrPaperLabel, els.corrOutputLabel, els.corrTitle]
+      .forEach(el => el.addEventListener('input', syncReviewFromForm));
+
+    els.acceptBtn.addEventListener('click', () => setStatus('accepted'));
+    els.correctBtn.addEventListener('click', () => setStatus('corrected'));
+    els.rejectBtn.addEventListener('click', () => setStatus('rejected'));
+    els.skipBtn.addEventListener('click', () => setStatus('skipped'));
+    els.prevBtn.addEventListener('click', () => {
+      if (!state.filtered.length) return;
+      state.activeIndex = Math.max(0, state.activeIndex - 1);
+      renderCaseList(); renderCase();
+    });
+    els.nextBtn.addEventListener('click', () => {
+      if (!state.filtered.length) return;
+      state.activeIndex = Math.min(state.filtered.length - 1, state.activeIndex + 1);
+      renderCaseList(); renderCase();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+      if (event.key === 'a') setStatus('accepted');
+      if (event.key === 'c') setStatus('corrected');
+      if (event.key === 'r') setStatus('rejected');
+      if (event.key === 's') setStatus('skipped');
+      if (event.key === 'ArrowLeft') els.prevBtn.click();
+      if (event.key === 'ArrowRight') els.nextBtn.click();
+    });
+  </script>
+</body>
+</html>

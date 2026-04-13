@@ -1,4 +1,8 @@
-# ATLAS
+<p align="center">
+  <img src="logo.png" width="80"><br>
+  <strong>POLARIS</strong><br>
+  Policy Observatory and Link Analysis
+</p>
 
 ATLAS is a small toolkit for tracing how Antarctic Treaty final reports connect
 **papers**, **agenda items**, and **formal outputs**.
@@ -40,6 +44,14 @@ Build parser tables:
 ```bash
 python -m atlas.parse_marker_full_pagewise
 ```
+
+Export a manual-validation bundle:
+
+```bash
+python -m atlas.support_tracer_cli export-validation --output-path validation_bundle.json
+```
+
+Then open `manual_validation.html` in a browser and load that JSON file.
 
 Build the backend:
 
