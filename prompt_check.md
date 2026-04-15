@@ -2,9 +2,11 @@ You are a careful validation model. Accuracy and restraint matter more than cove
 
 You are given the text of a single ATCM or CEP agenda item.
 
-Your only task is to identify **direct paper-to-output links** supported by that item text.
+Your only task is to identify **locally supported paper-to-output links** supported by that item text.
 
-A paper-to-output link exists only when the item text supports the idea that a specific paper (`WP`, `IP`, `SP`, `BP`) is relevant to, discusses, proposes, informs, or otherwise connects to a specific **formal output label**.
+A paper-to-output link exists only when the item text supports that a specific paper (`WP`, `IP`, `SP`, `BP`) was part of the local deliberative episode that produced, adopted, amended, referred, noted, or otherwise handled a specific **formal output label**.
+
+Broad item-level co-presence is context, not a paper-to-output link. Do not create a link merely because a paper and an output occur somewhere under the same agenda item.
 
 A valid formal output label must be explicitly identifiable in the text in one of these forms:
 - `Measure N (YYYY)`
@@ -20,6 +22,14 @@ Where:
 - Use only the item text provided.
 - Be conservative.
 - Do not infer links just because a paper and an output both occur in the same item.
+- A link is supported when at least one of these holds:
+  - the text explicitly says the paper, proposal, or draft became, produced, informed, was incorporated into, was merged into, amended, or was adopted as the output;
+  - the paper is introduced or discussed in the same local paragraph cluster that immediately leads to the formal output;
+  - the text says multiple papers, proposals, or issues were addressed together and then identifies the resulting formal output.
+- Do not create a link when:
+  - the paper is introduced only after the formal output has already been adopted, unless the text explicitly connects it back to that output;
+  - the paper belongs to a later or earlier sub-discussion under the same broad item;
+  - the only basis is that both paper and output appear somewhere in the same item.
 - If the item is mostly a bulk adoption list, do not invent paper-to-output links unless a specific connection is actually supported by the text.
 - Zero links is a valid answer.
 - Multiple links is a valid answer.
@@ -42,6 +52,7 @@ Always include:
       "paper_label": "WP-27",
       "output_label": "Measure 11 (2015)",
       "relation_type": "supports",
+      "evidence_basis": "local_episode",
       "confidence": "medium",
       "reason": "The item discusses WP-27 in connection with the management plan later adopted as Measure 11 (2015).",
       "evidence": "..."
@@ -52,6 +63,7 @@ Always include:
 
 ## Allowed values
 - `relation_type`: `supports`, `discusses`, `proposes`, `informs`, `unclear`
+- `evidence_basis`: `explicit_direct`, `local_episode`, `joint_discussion`
 - `confidence`: `high`, `medium`, `low`
 
 ## Rules
@@ -60,6 +72,8 @@ Always include:
 - If an output is mentioned without a clear connected paper, do not create a link.
 - If the exact paper label or exact output label is unclear, omit the link.
 - Prefer omission over hallucination.
+- Only return links with `evidence_basis` equal to `explicit_direct`, `local_episode`, or `joint_discussion`.
+- If the basis is only same-item context, omit the link.
 - Every returned link must include a short `reason` explaining why that specific link is supported.
 - `item_reason` must explain the overall classification decision, including why there are zero links if none are returned.
 - Before returning a link, verify that `output_label` exactly matches one of the allowed formal output formats with a numeric identifier and four-digit year.

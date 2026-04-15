@@ -518,6 +518,7 @@
               item_title: p.item_title || null,
               output_label: link.output_label || null,
               relation_type: link.relation_type || null,
+              evidence_basis: link.evidence_basis || null,
               link_confidence: link.confidence || null,
               reason: link.reason || null,
               evidence: link.evidence || null,
@@ -530,6 +531,7 @@
             item_title: p.item_title || null,
             output_label: p.output_label || null,
             relation_type: p.relation_type || null,
+            evidence_basis: p.evidence_basis || null,
             link_confidence: p.confidence || p.link_confidence || null,
             link_basis: p.link_basis || null,
             reason: p.reason || null,
@@ -626,8 +628,8 @@
           ? `${selected.paper_label || '(no paper)'} -> ${selected.item_title || '(item)'}`
           : `${selected.item_title || '(item)'} -> ${selected.outcome_label || '(no outcome)'}`;
       const sources = edge?.sources?.length ? `<div class="small muted tight">Sources: ${escapeHtml(edge.sources.join(' · '))}</div>` : '';
-      const relation = edge?.relation_types?.length || edge?.confidences?.length
-        ? `<div class="small muted tight">${escapeHtml([...(edge.relation_types || []), ...(edge.confidences || [])].join(' · '))}</div>`
+      const relation = edge?.evidence_basis?.length || edge?.relation_types?.length || edge?.confidences?.length
+        ? `<div class="small muted tight">${escapeHtml([...(edge.evidence_basis || []), ...(edge.relation_types || []), ...(edge.confidences || [])].join(' · '))}</div>`
         : '';
       const evidence = edge?.evidence?.length
         ? `<div class="small tight"><strong>Evidence:</strong> ${escapeHtml(edge.evidence.slice(0, 3).join(' | '))}</div>`
@@ -670,6 +672,7 @@
           paper_label: x.paper_label || null,
           output_label: x.output_label || null,
           relation_type: x.relation_type || x.link_basis || null,
+          evidence_basis: x.evidence_basis || null,
           confidence: x.confidence || x.link_confidence || null,
           reason: x.reason || null,
           evidence: x.evidence || null,
@@ -683,6 +686,7 @@
           paper_label: c.predicted.paper_label || null,
           output_label: c.predicted.output_label || null,
           relation_type: c.predicted.relation_type || null,
+          evidence_basis: c.predicted.evidence_basis || null,
           confidence: c.predicted.confidence || null,
           reason: c.predicted.reason || null,
           evidence: c.predicted.evidence || c.evidence?.primary_evidence || null,
@@ -791,6 +795,7 @@
             output_label: outcomeLabel,
             sources: [],
             relation_types: [],
+            evidence_basis: [],
             confidences: [],
             evidence: [],
             reasons: [],
@@ -799,6 +804,7 @@
         const edge = edgeMap.get(id);
         addUnique(edge.sources, sourceType);
         addUnique(edge.relation_types, row.link_basis || row.relation_type);
+        addUnique(edge.evidence_basis, row.evidence_basis);
         addUnique(edge.confidences, row.link_confidence || row.confidence);
         addUnique(edge.evidence, row.evidence);
         addUnique(edge.reasons, row.reason);
@@ -999,6 +1005,7 @@
             paper_label: row.paper_label || '',
             outcome_label: row.output_label || '',
             link_basis: row.link_basis || row.relation_type || '',
+            evidence_basis: row.evidence_basis || '',
             link_confidence: row.link_confidence || row.confidence || '',
             evidence: row.evidence || '',
             paper_item_valid: review.paper_item_valid || paperEdgeReview.status || '',
@@ -1047,6 +1054,7 @@
             paper_label: edge.paper_label || '',
             outcome_label: edge.output_label || '',
             link_basis: edge.relation_types.join(' | '),
+            evidence_basis: edge.evidence_basis.join(' | '),
             link_confidence: edge.confidences.join(' | '),
             evidence: edge.evidence.join(' | '),
             sources: edge.sources.join(' | '),
@@ -1075,6 +1083,7 @@
         paper_label: link?.paper_label || null,
         output_label: link?.output_label || null,
         relation_type: link?.relation_type || null,
+        evidence_basis: link?.evidence_basis || null,
         confidence: link?.confidence || null,
         reason: link?.reason || null,
         evidence: link?.evidence || null,
@@ -1141,6 +1150,7 @@
           paper_label: get('paper_label') || null,
           output_label: get('output_label') || null,
           relation_type: get('relation_type') || null,
+          evidence_basis: null,
           confidence: get('confidence') || null,
           reason: get('reason') || null,
           evidence: get('evidence') || null,

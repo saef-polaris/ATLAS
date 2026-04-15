@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+import re
+import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-import sys
 
 import pandas as pd
 from google import genai
@@ -67,7 +68,7 @@ def _build_prompt(prompt_text: str, item: dict[str, Any]) -> str:
     return f"{prompt_text.strip()}\n\nReturn valid JSON only.\n\nClassify this agenda item:\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n"
 
 
-def _parse_response(text: str) -> dict[str, Any]:
+def _strip_response_wrappers(text: str) -> str:
     text = text.strip()
     if text.startswith("```"):
         lines = text.splitlines()
@@ -76,6 +77,11 @@ def _parse_response(text: str) -> dict[str, Any]:
         if lines and lines[-1].startswith("```"):
             lines = lines[:-1]
         text = "\n".join(lines).strip()
+    return text
+
+
+def _parse_response(text: str) -> dict[str, Any]:
+    text = _strip_response_wrappers(text)
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -86,19 +92,111 @@ def _parse_response(text: str) -> dict[str, Any]:
         raise
 
 
+def _retry_delay_seconds(exc: Exception) -> int:
+    text = str(exc)
+    for pattern in (r"retryDelay['\"]?: ['\"]?(\d+)s", r"retry in ([\d.]+)s"):
+        match = re.search(pattern, text)
+        if match:
+            return max(1, int(float(match.group(1))) + 2)
+    return 30
+
+
+def _generate_content_with_retries(client: genai.Client, model: str, prompt: str, attempts: int = 3) -> str:
+    last_exc: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            response = client.models.generate_content(model=model, contents=prompt)
+            return response.text or ""
+        except Exception as exc:
+            last_exc = exc
+            text = str(exc)
+            if attempt + 1 >= attempts or ("429" not in text and "RESOURCE_EXHAUSTED" not in text):
+                raise
+            time.sleep(_retry_delay_seconds(exc))
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("content generation failed without an exception")
+
+
+def _repair_response_prompt(raw: str, parse_error: Exception) -> str:
+    return f"""The following model response was intended to be valid JSON but failed to parse.
+
+Return valid JSON only, using exactly this top-level schema:
+{{
+  "item_reason": "...",
+  "paper_output_links": [
+    {{
+      "paper_label": "...",
+      "output_label": "Measure N (YYYY)",
+      "relation_type": "supports|discusses|proposes|informs|unclear",
+      "evidence_basis": "explicit_direct|local_episode|joint_discussion",
+      "confidence": "high|medium|low",
+      "reason": "...",
+      "evidence": "..."
+    }}
+  ]
+}}
+
+Preserve the intended links from the malformed response where possible. If a
+link is ambiguous or cannot be repaired confidently, omit it.
+
+Parse error: {parse_error}
+
+Malformed response:
+{raw}
+"""
+
+
+def _retry_classification_prompt(prompt: str, parse_error: Exception) -> str:
+    return (
+        f"{prompt.rstrip()}\n\n"
+        "Your previous response was not valid JSON and could not be parsed. "
+        f"Parser error: {parse_error}\n\n"
+        "Retry the same classification task from the original item text. "
+        "Return valid JSON only. Escape all quotation marks inside string values."
+    )
+
+
+def _parse_or_repair_response(client: genai.Client, model: str, raw: str) -> tuple[dict[str, Any], bool, str | None]:
+    try:
+        return _parse_response(raw), False, None
+    except json.JSONDecodeError as exc:
+        repaired_raw = _generate_content_with_retries(client, model, _repair_response_prompt(raw, exc), attempts=2)
+        return _parse_response(repaired_raw), True, str(exc)
+
+
 def classify_item(item: dict[str, Any], prompt_path: Path = DEFAULT_PROMPT_PATH, model: str = DEFAULT_MODEL) -> dict[str, Any]:
     prompt_text = prompt_path.read_text()
     prompt = _build_prompt(prompt_text, item)
     client = genai.Client()
-    response = client.models.generate_content(model=model, contents=prompt)
-    raw = response.text or ""
-    parsed = _parse_response(raw)
+    parse_repaired = False
+    parse_error: str | None = None
+    json_retry_count = 0
+    raw = ""
+
+    for attempt in range(3):
+        request_prompt = prompt if attempt == 0 else _retry_classification_prompt(prompt, parse_error or "invalid JSON")
+        raw = _generate_content_with_retries(client, model, request_prompt)
+        try:
+            parsed = _parse_response(raw)
+            json_retry_count = attempt
+            parse_error = None if attempt == 0 else parse_error
+            break
+        except json.JSONDecodeError as exc:
+            parse_error = str(exc)
+    else:
+        json_retry_count = 3
+        parsed, parse_repaired, repair_error = _parse_or_repair_response(client, model, raw)
+        parse_error = parse_error or repair_error
     return {
         "item_id": item["item_id"],
         "item": item,
         "llm_result": parsed,
         "classified_at": datetime.now(UTC).isoformat(),
         "model": model,
+        "parse_repaired": parse_repaired,
+        "parse_error": parse_error,
+        "json_retry_count": json_retry_count,
     }
 
 
