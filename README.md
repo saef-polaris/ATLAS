@@ -1,7 +1,7 @@
 <p align="center">
   <img src="logo.png" width="80"><br>
-  <strong>POLARIS</strong><br>
-  Policy Observatory and Link Analysis
+  <strong>ATLAS</strong><br>
+  Antarctic Treaty Literature & Analysis System
 </p>
 
 ATLAS is a small toolkit for tracing how Antarctic Treaty final reports connect
