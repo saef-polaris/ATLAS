@@ -9,11 +9,13 @@ import duckdb
 import pandas as pd
 
 from .config import ensure_data_dir, get_data_dir, get_marker_dir
+from .truth_table import DEFAULT_TRUTH_TABLE_PATH, build_truth_table
 
 DATA_DIR = get_data_dir()
 MARKER_DIR = get_marker_dir()
 PARQUET_DIR = MARKER_DIR / "support_tracer_parquet"
 DB_PATH = MARKER_DIR / "support_tracer.duckdb"
+TRUTH_TABLE_PATH = DEFAULT_TRUTH_TABLE_PATH
 
 TABLE_SPECS = {
     "items": "derived_marker_items.csv",
@@ -25,7 +27,9 @@ TABLE_SPECS = {
 }
 
 
-def ensure_parquet_tables(marker_dir: Path = MARKER_DIR, parquet_dir: Path = PARQUET_DIR) -> dict[str, Path]:
+def ensure_parquet_tables(
+    marker_dir: Path = MARKER_DIR, parquet_dir: Path = PARQUET_DIR
+) -> dict[str, Path]:
     ensure_data_dir(marker_dir.parent)
     parquet_dir.mkdir(parents=True, exist_ok=True)
     out: dict[str, Path] = {}
@@ -40,6 +44,17 @@ def ensure_parquet_tables(marker_dir: Path = MARKER_DIR, parquet_dir: Path = PAR
     return out
 
 
+def build_truth_table_for_backend(
+    marker_dir: Path = MARKER_DIR,
+    truth_table_path: Path = TRUTH_TABLE_PATH,
+) -> Path:
+    result = build_truth_table(
+        marker_dir=marker_dir,
+        output_path=truth_table_path,
+    )
+    return result.truth_table_path
+
+
 def connect(db_path: Path = DB_PATH) -> duckdb.DuckDBPyConnection:
     ensure_data_dir(db_path.parent)
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +66,10 @@ def build_or_refresh_database(
     parquet_dir: Path = PARQUET_DIR,
     db_path: Path = DB_PATH,
 ) -> Path:
-    parquet_paths = ensure_parquet_tables(marker_dir=marker_dir, parquet_dir=parquet_dir)
+    parquet_paths = ensure_parquet_tables(
+        marker_dir=marker_dir, parquet_dir=parquet_dir
+    )
+    truth_table_path = build_truth_table_for_backend(marker_dir=marker_dir)
     con = connect(db_path)
     try:
         for table_name, parquet_path in parquet_paths.items():
@@ -60,70 +78,64 @@ def build_or_refresh_database(
                 f"CREATE VIEW {table_name} AS SELECT * FROM read_parquet('{parquet_path.as_posix()}')"
             )
 
-        con.execute("DROP VIEW IF EXISTS output_support")
+        con.execute("DROP VIEW IF EXISTS truth_table")
         con.execute(
-            """
-            CREATE VIEW output_support AS
-            SELECT
-                io.run,
-                io.sequence_id,
-                io.sequence_type,
-                io.item_num,
-                i.item_title,
-                io.output_type,
-                io.output_number,
-                io.output_year,
-                io.output_label,
-                io.title AS output_title,
-                io.evidence AS item_output_evidence,
-                io.link_confidence AS item_output_confidence
-            FROM item_output_links io
-            LEFT JOIN items i
-              ON io.run = i.run
-             AND io.sequence_id = i.sequence_id
-             AND io.sequence_type = i.sequence_type
-             AND io.item_num = i.item_num
-            """
+            f"CREATE VIEW truth_table AS SELECT * FROM read_parquet('{truth_table_path.as_posix()}')"
         )
 
+        con.execute("DROP VIEW IF EXISTS output_support")
+        con.execute("""
+            CREATE VIEW output_support AS
+            SELECT DISTINCT
+                run,
+                sequence_id,
+                sequence_type,
+                item_num,
+                item_title,
+                output_type,
+                output_number,
+                output_year,
+                output_label,
+                output_title,
+                evidence AS item_output_evidence,
+                paper_output_confidence AS item_output_confidence
+            FROM truth_table
+            WHERE item_output_link_exists = TRUE
+              AND paper_item_link_exists = FALSE
+              AND output_label IS NOT NULL
+            """)
+
         con.execute("DROP VIEW IF EXISTS paper_support")
-        con.execute(
-            """
+        con.execute("""
             CREATE VIEW paper_support AS
-            SELECT
-                pi.run,
-                pi.sequence_id,
-                pi.sequence_type,
-                pi.item_num,
-                pi.item_title,
-                pi.paper_kind,
-                pi.paper_number,
-                pi.paper_rev,
-                pi.paper_label,
-                po.output_type,
-                po.output_number,
-                po.output_year,
-                po.output_label,
-                po.output_title,
-                po.link_confidence AS paper_output_confidence,
-                po.evidence AS paper_output_evidence
-            FROM paper_item_links pi
-            LEFT JOIN paper_output_links po
-              ON pi.run = po.run
-             AND pi.sequence_id = po.sequence_id
-             AND pi.sequence_type = po.sequence_type
-             AND pi.item_num = po.item_num
-             AND pi.paper_kind = po.paper_kind
-             AND pi.paper_number = po.paper_number
-             AND coalesce(pi.paper_rev, -1) = coalesce(po.paper_rev, -1)
-            """
-        )
+            SELECT DISTINCT
+                run,
+                sequence_id,
+                sequence_type,
+                item_num,
+                item_title,
+                paper_kind,
+                paper_number,
+                paper_rev,
+                paper_label,
+                output_type,
+                output_number,
+                output_year,
+                output_label,
+                output_title,
+                paper_output_confidence,
+                evidence AS paper_output_evidence
+            FROM truth_table
+            WHERE paper_label IS NOT NULL
+            """)
     finally:
         con.close()
     return db_path
 
 
-def fetch_df(con: duckdb.DuckDBPyConnection, query: str, params: list[Any] | None = None) -> pd.DataFrame:
+def fetch_df(
+    con: duckdb.DuckDBPyConnection, query: str, params: list[Any] | None = None
+) -> pd.DataFrame:
     if params is None:
         params = []
     df = con.execute(query, params).df()
@@ -162,7 +174,9 @@ def query_by_output(output_label: str, db_path: Path = DB_PATH) -> dict[str, Any
         con.close()
 
 
-def query_by_item(run: str, item_num: str, sequence_type: str | None = None, db_path: Path = DB_PATH) -> dict[str, Any]:
+def query_by_item(
+    run: str, item_num: str, sequence_type: str | None = None, db_path: Path = DB_PATH
+) -> dict[str, Any]:
     con = connect(db_path)
     try:
         if sequence_type is None:
@@ -232,11 +246,22 @@ def query_by_paper(paper_label: str, db_path: Path = DB_PATH) -> dict[str, Any]:
 
 
 def query_to_text(result: dict[str, Any]) -> str:
-    lines = [json.dumps({"query_type": result["query_type"], "query": result["query"]}, ensure_ascii=False)]
+    lines = [
+        json.dumps(
+            {"query_type": result["query_type"], "query": result["query"]},
+            ensure_ascii=False,
+        )
+    ]
     if result["query_type"] == "output":
-        lines.append(f"outputs={len(result['outputs'])} items={len(result['supporting_items'])} papers={len(result['supporting_papers'])}")
+        lines.append(
+            f"outputs={len(result['outputs'])} items={len(result['supporting_items'])} papers={len(result['supporting_papers'])}"
+        )
     elif result["query_type"] == "item":
-        lines.append(f"items={len(result['items'])} outputs={len(result['outputs'])} papers={len(result['papers'])}")
+        lines.append(
+            f"items={len(result['items'])} outputs={len(result['outputs'])} papers={len(result['papers'])}"
+        )
     else:
-        lines.append(f"paper_items={len(result['paper_items'])} paper_outputs={len(result['paper_outputs'])}")
+        lines.append(
+            f"paper_items={len(result['paper_items'])} paper_outputs={len(result['paper_outputs'])}"
+        )
     return "\n".join(lines)

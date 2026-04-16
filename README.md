@@ -14,6 +14,31 @@ In practice, it helps answer questions like:
 
 ATLAS is built as a Python package with a simple CLI.
 
+## Canonical analytical product
+
+The canonical analytical product is the singular truth table:
+
+- `truth_table.parquet`
+- optional mirror: `truth_table.csv`
+- manifest: `truth_table_manifest.json`
+
+This truth table is the only approved source for downstream analytical joins.
+Parser CSVs, normalized linkage artifacts, and backend DuckDB views are inputs,
+intermediates, or serving layers, not competing sources of truth.
+
+Ownership is split as follows:
+
+- `ATLAS` owns parsing, normalization, truth-table assembly, validation, and query helpers
+- `apparent_consensus` owns orchestration of production analysis builds
+
+The default production build is in-memory-first:
+- parser/linkage tables are loaded into memory
+- canonical truth-table rows are assembled in `atlas.truth_table`
+- validation runs on the assembled frame
+- only final outputs are persisted by default
+
+Intermediate CSV writes should be treated as debug-only and opt-in.
+
 ## Data
 
 The extraction data lives in a separate repo, `ATLAS-data`. It is not a Python
@@ -45,6 +70,20 @@ Build parser tables:
 python -m atlas.parse_marker_full_pagewise
 ```
 
+Build the canonical truth table:
+
+```bash
+python -m atlas.support_tracer_cli build-truth-table
+```
+
+Or, through the main repo orchestration path:
+
+```bash
+python apparent_consensus/pipelines/build_truth_table.py
+```
+
+The two entry points should resolve to the same core builder logic in `ATLAS`.
+
 Export a manual-validation bundle from the rule-based links:
 
 ```bash
@@ -74,6 +113,10 @@ Build the backend:
 python -m atlas.support_tracer_cli build-db
 ```
 
+The backend database is a serving/cache layer over the canonical truth table.
+Queries should resolve through `truth_table` or truth-table-derived views, not
+through legacy linkage tables as independent analytical sources.
+
 Query an output:
 
 ```bash
@@ -95,11 +138,34 @@ python -m atlas.support_tracer_cli paper WP-48
 ## Python
 
 ```python
-from atlas import build_or_refresh_database, query_by_output
+from atlas import build_or_refresh_database, build_truth_table, query_by_output
 
+build_truth_table()
 build_or_refresh_database()
 result = query_by_output("Decision 1 (2004)")
 ```
+
+## Truth-table build API
+
+ATLAS exposes the canonical builder in `atlas.truth_table`.
+
+Primary API:
+- `build_truth_table(...)` — file-backed production path
+- `build_truth_table_from_tables(...)` — in-memory path from already loaded tables
+- `load_truth_table(...)` — load the canonical parquet output
+
+Expected default behavior:
+- write `truth_table.parquet`
+- optionally write `truth_table.csv`
+- write `truth_table_manifest.json`
+- do not write intermediate parser/linkage artifacts unless explicitly requested for debugging
+
+The manifest records:
+- source artifacts
+- row counts
+- duplicate rows dropped
+- build settings
+- output locations
 
 ## Normalized paper extraction
 

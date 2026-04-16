@@ -28,6 +28,12 @@ from .support_tracer_backend import (
     query_by_output,
     query_by_paper,
 )
+from .truth_table import (
+    DEFAULT_TRUTH_TABLE_CSV_PATH,
+    DEFAULT_TRUTH_TABLE_MANIFEST_PATH,
+    DEFAULT_TRUTH_TABLE_PATH,
+    build_truth_table,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -104,6 +110,33 @@ def parse_args() -> argparse.Namespace:
     normalized.add_argument("--output-path", type=Path, required=True)
     normalized.add_argument(
         "--format", choices=["json", "jsonl", "csv"], default="json"
+    )
+
+    truth = sub.add_parser(
+        "build-truth-table",
+        help="Build the canonical paper-item-output truth table and manifest.",
+    )
+    truth.add_argument("--marker-dir", type=Path, default=MARKER_DIR)
+    truth.add_argument(
+        "--classifications-path", type=Path, default=PAPER_DATASET_CLASSIFICATIONS_PATH
+    )
+    truth.add_argument("--output-path", type=Path, default=DEFAULT_TRUTH_TABLE_PATH)
+    truth.add_argument(
+        "--manifest-path", type=Path, default=DEFAULT_TRUTH_TABLE_MANIFEST_PATH
+    )
+    truth.add_argument(
+        "--csv-output-path", type=Path, default=DEFAULT_TRUTH_TABLE_CSV_PATH
+    )
+    truth.add_argument(
+        "--exclude-llm-links",
+        action="store_true",
+        help="Build the truth table from deterministic parser outputs only.",
+    )
+    truth.add_argument(
+        "--debug-output-dir",
+        type=Path,
+        default=None,
+        help="Optional directory for debug-only intermediate CSV writes.",
     )
 
     q_out = sub.add_parser("output", help="Trace a formal output to items and papers.")
@@ -201,6 +234,18 @@ def main() -> None:
         else:
             dataset.links.to_csv(args.output_path, index=False)
         print(args.output_path)
+        return
+    if args.command == "build-truth-table":
+        result = build_truth_table(
+            marker_dir=args.marker_dir,
+            classifications_path=args.classifications_path,
+            output_path=args.output_path,
+            manifest_path=args.manifest_path,
+            csv_output_path=args.csv_output_path,
+            include_llm_links=not args.exclude_llm_links,
+            debug_output_dir=args.debug_output_dir,
+        )
+        print(json.dumps(result.to_dict(), ensure_ascii=False))
         return
     if args.command == "output":
         result = query_by_output(args.label, db_path=args.db_path)

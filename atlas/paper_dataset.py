@@ -11,6 +11,56 @@ import pandas as pd
 
 from .config import get_marker_dir
 
+ATCM_MEETING_YEAR = {
+    1: 1961,
+    2: 1962,
+    3: 1964,
+    4: 1966,
+    5: 1968,
+    6: 1970,
+    7: 1972,
+    8: 1975,
+    9: 1977,
+    10: 1979,
+    11: 1981,
+    12: 1983,
+    13: 1985,
+    14: 1987,
+    15: 1989,
+    16: 1991,
+    17: 1992,
+    18: 1994,
+    19: 1995,
+    20: 1996,
+    21: 1997,
+    22: 1998,
+    23: 1999,
+    24: 2000,
+    25: 2002,
+    26: 2003,
+    27: 2004,
+    28: 2005,
+    29: 2006,
+    30: 2007,
+    31: 2008,
+    32: 2009,
+    33: 2010,
+    34: 2011,
+    35: 2012,
+    36: 2013,
+    37: 2014,
+    38: 2015,
+    39: 2016,
+    40: 2017,
+    41: 2018,
+    42: 2019,
+    43: 2021,
+    44: 2022,
+    45: 2023,
+    46: 2024,
+    47: 2025,
+}
+
 MARKER_DIR = get_marker_dir()
 DEFAULT_CLASSIFICATIONS_PATH = MARKER_DIR / "item_llm_links.jsonl"
 
@@ -230,6 +280,24 @@ def infer_meeting_number(item: dict[str, Any]) -> int | None:
     return None
 
 
+def meeting_year_from_number(meeting_number: Any) -> int | None:
+    parsed = _parse_meeting_number(meeting_number)
+    if parsed is None:
+        return None
+    return ATCM_MEETING_YEAR.get(parsed)
+
+
+def meeting_period_from_number(meeting_number: Any) -> str | None:
+    year = meeting_year_from_number(meeting_number)
+    if year is None:
+        return None
+    if 2000 <= year <= 2011:
+        return "2000--2011"
+    if 2012 <= year <= 2025:
+        return "2012--2025"
+    return str(year)
+
+
 def _iter_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for line in path.read_text().splitlines():
@@ -282,6 +350,8 @@ def _normalize_link_record(
                 "item_title": item.get("item_title"),
                 "item_text": item.get("text"),
                 "meeting_number": meeting_number,
+                "meeting_year": meeting_year_from_number(meeting_number),
+                "meeting_period": meeting_period_from_number(meeting_number),
                 "item_meeting_number": meeting_number,
                 "paper_meeting_number": normalized_paper.meeting_number,
                 "paper_kind": normalized_paper.paper_kind,
