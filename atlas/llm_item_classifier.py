@@ -134,11 +134,31 @@ Return valid JSON only, using exactly this top-level schema:
       "reason": "...",
       "evidence": "..."
     }}
+  ],
+  "paper_outcomes": [
+    {{
+      "paper_label": "...",
+      "outcome": "approved|approved_with_reservations|blocked|rejected|deferred|noted|not_determined",
+      "confidence": "high|medium|low",
+      "reason": "...",
+      "evidence": "..."
+    }}
+  ],
+  "consensus_signals": [
+    {{
+      "party": "...",
+      "signal_type": "reservation|statement_for_record|objection|block|conditional_support|withdrawal|chair_intervention|amendment|support",
+      "paper_label": "...",
+      "output_label": "...",
+      "reason": "...",
+      "evidence": "..."
+    }}
   ]
 }}
 
-Preserve the intended links from the malformed response where possible. If a
-link is ambiguous or cannot be repaired confidently, omit it.
+Preserve the intended links, outcomes, and consensus signals from the malformed
+response where possible. If an entry is ambiguous or cannot be repaired
+confidently, omit it.
 
 Parse error: {parse_error}
 
@@ -269,6 +289,8 @@ def export_llm_validation_bundle(classifications_path: Path = DEFAULT_CLASSIFICA
         item = row["item"]
         llm = row["llm_result"]
         links = llm.get("paper_output_links", []) or []
+        outcomes = llm.get("paper_outcomes", []) or []
+        signals = llm.get("consensus_signals", []) or []
         predicted = {
             "run": item.get("run"),
             "sequence_id": item.get("sequence_id"),
@@ -278,9 +300,13 @@ def export_llm_validation_bundle(classifications_path: Path = DEFAULT_CLASSIFICA
             "model": row.get("model"),
             "item_reason": llm.get("item_reason"),
             "paper_output_links": links,
+            "paper_outcomes": outcomes,
+            "consensus_signals": signals,
             "paper_labels": sorted({link.get("paper_label") for link in links if link.get("paper_label")}),
             "output_labels": sorted({link.get("output_label") for link in links if link.get("output_label")}),
             "link_count": len(links),
+            "outcome_count": len(outcomes),
+            "signal_count": len(signals),
         }
         primary_evidence = "\n\n".join(
             f"{link.get('paper_label', '')} -> {link.get('output_label', '')}: {link.get('evidence', '')}" for link in links
